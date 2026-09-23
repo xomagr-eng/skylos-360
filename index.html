@@ -125,6 +125,15 @@ ol.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:26p
 .big-btn.wh{background:radial-gradient(circle at 35% 30%,#ffd44d,var(--gold) 60%,#a37700);color:#111;touch-action:none;-webkit-user-select:none;user-select:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:30px}
 .big-btn.wh.on{box-shadow:0 0 0 10px rgba(245,179,1,.25),0 0 0 22px rgba(245,179,1,.12),0 10px 30px rgba(245,179,1,.45);transform:scale(.97)}
 details summary::-webkit-details-marker{color:var(--cyan)}
+.sndgrid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.sndctl{position:sticky;top:96px;z-index:5}
+@media(max-width:600px){ .sndgrid{grid-template-columns:1fr 1fr;gap:8px} .sndbtn{padding:9px;font-size:13px;gap:8px} .sndbtn .ic{width:38px;height:38px;font-size:22px} .sndctl{position:static} }
+.sndbtn{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);color:#fff;border-radius:14px;padding:12px;cursor:pointer;font-weight:700;font-size:14px;text-align:left;font-family:inherit;transition:.15s}
+.sndbtn .ic{font-size:28px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--card2);flex:0 0 auto}
+.sndbtn:hover{border-color:var(--red)}
+.sndbtn.on{border-color:var(--red);background:var(--redbg);box-shadow:0 0 0 3px rgba(228,34,47,.25)}
+.sndbtn.on .ic{animation:sndp .6s ease-in-out infinite alternate}
+@keyframes sndp{to{transform:scale(1.12)}}
 .muted{color:var(--mut)}
 .small{font-size:13px}
 .right{margin-left:auto}
@@ -597,7 +606,7 @@ const FOOD_GUIDE = [
 /* ΣΚΥΛΟΣ 360° — λογική εφαρμογής */
 const KEY = 'skylos360';
 const DEF = {p:{name:'',breed:'',sex:'m',birth:'',weight:'',target:'',neut:false,act:'normal',goal:'keep',coat:'short',ears:'floppy',kcalkg:3700,avatar:'🐕',vet:'',vetTel:''},
-  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,wh:{f:2900,pat:'two',vol:0.6}};
+  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,wh:{f:2900,pat:'two',vol:0.6},snd:{vol:0.35,loop:false,gap:5}};
 let S;
 try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||'{}')); S.p = Object.assign(structuredClone(DEF.p), S.p||{}); }catch(e){ S = structuredClone(DEF); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -656,7 +665,7 @@ let route = (location.hash||'#home').slice(1).split('/')[0]; if(!ROUTES.find(r=>
 const sub = {train:'cmds',food:'calc',groom:'plan',health:'vacc'};
 { const hs=location.hash.slice(1).split('/'); if(hs[1]) sub[route]=hs[1]; } /* π.χ. #train/tools */
 let filt = {cmd:'Όλα',gear:'Όλα',tox:'',breed:''};
-function go(r,s){ route=r; if(s) sub[r]=s; location.hash=r; render(); window.scrollTo(0,0); }
+function go(r,s){ if(typeof stopSnd==='function') stopSnd(true); route=r; if(s) sub[r]=s; location.hash=r; render(); window.scrollTo(0,0); }
 function renderNav(){ $('#nav').innerHTML = ROUTES.map(([k,t])=>`<button class="${k===route?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
   $('#dogchipTxt').textContent = S.p.name ? `${S.p.avatar} ${S.p.name} · ${ageTxt()}${S.p.weight?' · '+S.p.weight+' kg':''}` : 'Φτιάξε προφίλ σκύλου'; }
 function subnav(r, items){ return `<div class="subnav">${items.map(([k,t])=>`<button class="${sub[r]===k?'on':''}" onclick="sub['${r}']='${k}';render()">${t}</button>`).join('')}</div>`; }
@@ -760,6 +769,7 @@ function train(){
       <p class="small muted">Για πολλές επαναλήψεις, χρησιμοποίησε μέρος της ημερήσιας ξηράς τροφής (${calc().grams?Math.round(calc().grams*0.2)+' g ≈ 20%':'—'}) και αφαίρεσέ το από τα γεύματα.</p></div>
     </div>`; afterFns.push(renderScore, whUI);
   }
+  else if(sub.train==='sounds'){ body=soundsView(); }
   else if(sub.train==='log'){ const last7=S.log.filter(l=>diffDays(today(),l.d)<7); const mins=last7.reduce((a,l)=>a+(+l.min||0),0);
     body=`<div class="grid g2"><div class="card"><h3>➕ Νέα προπόνηση</h3>
       <div class="grid g2" style="gap:0 10px"><label class="f">Ημερομηνία<input type="date" id="lgD" value="${today()}"></label>
@@ -776,7 +786,7 @@ function train(){
   else { body=`<div class="grid g2">${PRINCIPLES.map(p=>`<div class="card"><h3>${p.ic} ${p.t}</h3><div class="small">${p.d}</div></div>`).join('')}</div>
     <div class="info">Διεθνείς οργανισμοί εκπαιδευτών και κτηνιάτρων συμπεριφοράς συστήνουν μεθόδους βασισμένες στην ανταμοιβή. Οι μέθοδοι τιμωρίας (πνιγμός, ηλεκτρισμός, «alpha roll») συνδέονται με περισσότερο άγχος και επιθετικότητα.</div>`; }
   return `<h1>🎓 Εκπαίδευση</h1><p class="sub">Βήμα-βήμα μαθήματα με θετική ενίσχυση, πρόγραμμα ανά ηλικία, κοινωνικοποίηση και εργαλεία προπόνησης.</p>
-  ${subnav('train',[['cmds','📋 Εντολές'],['plan','🗓️ Πρόγραμμα 6 εβδ.'],['soc','🌍 Κοινωνικοποίηση'],['tools','📣 Σφυρίχτρα & clicker'],['log','📒 Ημερολόγιο'],['prin','📖 Αρχές']])}${body}`;
+  ${subnav('train',[['cmds','📋 Εντολές'],['plan','🗓️ Πρόγραμμα 6 εβδ.'],['soc','🌍 Κοινωνικοποίηση'],['tools','📣 Σφυρίχτρα & clicker'],['sounds','🔊 Ήχοι'],['log','📒 Ημερολόγιο'],['prin','📖 Αρχές']])}${body}`;
 }
 function cmdModal(id){ const c=COMMANDS.find(x=>x.id===id); const l=S.cmd[id]||0;
   openModal(`<h2 style="margin-top:0">${c.n}</h2><span class="pill p-vio">${c.cat}</span><span class="pill">Ηλικία ${c.age}</span><span class="pill p-gold">Δυσκολία ${'★'.repeat(c.d)}</span>
@@ -809,6 +819,114 @@ function clickSound(){ const a=ac(), t=a.currentTime; const b=a.createBuffer(1,a
   s.connect(f).connect(g).connect(a.destination); s.start(t);
   const o=a.createOscillator(), og=a.createGain(); o.frequency.value=2400; og.gain.setValueAtTime(.25,t); og.gain.exponentialRampToValueAtTime(.001,t+.02); o.connect(og).connect(a.destination); o.start(t); o.stop(t+.03); }
 function repCount(){ tools.reps++; const r=$('#reps'); if(r) r.textContent=tools.reps; }
+
+/* ---------- Ήχοι για τον σκύλο (σύνθεση Web Audio — offline, χωρίς τρίτους, χωρίς πνευματικά δικαιώματα) ---------- */
+S.snd = Object.assign({vol:0.35, loop:false, gap:5}, S.snd||{});
+const SND = {master:null, loopT:null, endT:null, cur:null, nb:{}};
+function sMaster(){ const a=ac(); if(!SND.master){ SND.master=a.createGain(); const lim=a.createDynamicsCompressor(); lim.threshold.value=-6; lim.knee.value=3; lim.ratio.value=20; lim.attack.value=.002; lim.release.value=.2; /* limiter: χωρίς παραμόρφωση */ SND.master.connect(lim).connect(a.destination); } SND.master.gain.value=S.snd.vol; return SND.master; }
+function noiseBuf(type){ if(SND.nb[type]) return SND.nb[type]; const a=ac(), n=a.sampleRate*3, b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); let last=0;
+  for(let i=0;i<n;i++){ const w=Math.random()*2-1; if(type==='brown'){ last=(last+0.02*w)/1.02; d[i]=last*3.5; } else d[i]=w; } return SND.nb[type]=b; }
+function nz(type,t,dur){ const s=ac().createBufferSource(); s.buffer=noiseBuf(type); s.loop=true; s.start(t); s.stop(t+dur+0.05); return s; }
+function osc(type,t,dur){ const o=ac().createOscillator(); o.type=type; o.start(t); o.stop(t+dur+0.05); return o; }
+function bq(type,f,q){ const x=ac().createBiquadFilter(); x.type=type; x.frequency.value=f; if(q!=null) x.Q.value=q; return x; }
+function gn(v=0){ const g=ac().createGain(); g.gain.value=v; return g; }
+function env(g,t,att,peak,hold,rel){ g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(peak,t+att); g.gain.setValueAtTime(peak,t+att+hold); g.gain.exponentialRampToValueAtTime(0.0001,t+att+hold+rel); }
+const OUT = () => sMaster();
+
+/* γάβγισμα: πριονωτός τόνος με πτώση τόνου + θόρυβος, μέσα από δύο «φωνήεντα» (formants) */
+function bark1(t,size,var_=1){ const P={s:[1050,680,.12,1400,3000],m:[560,340,.17,850,1900],l:[270,150,.23,520,1250]}[size], dur=P[2];
+  const o=osc('sawtooth',t,dur); o.frequency.setValueAtTime(P[0]*.8*var_,t); o.frequency.linearRampToValueAtTime(P[0]*var_,t+.02); o.frequency.exponentialRampToValueAtTime(P[1]*var_,t+dur);
+  const n=nz('white',t,dur), ng=gn(.35), mix=gn(1); o.connect(mix); n.connect(ng).connect(mix);
+  const f1=bq('bandpass',P[3],2.5), f2=bq('bandpass',P[4],3), g=gn(), f2g=gn(.6); mix.connect(f1).connect(g); mix.connect(f2).connect(f2g).connect(g);
+  env(g,t,.008,1.6,dur*.3,dur*.7); g.connect(bq('lowpass',5000)).connect(OUT()); return dur+.05; }
+function barks(t,size,times){ let d=0; times.forEach(([at,v])=>{ d=Math.max(d, at+bark1(t+at,size,v)); }); return d; }
+function growl(t){ const dur=2.2, m=gn(1);
+  [95,97.5].forEach(f=>{ const o=osc('sawtooth',t,dur); o.frequency.value=f; o.connect(m); });
+  const am=gn(.5), l=osc('sine',t,dur); l.frequency.value=23; const ld=gn(.45); l.connect(ld).connect(am.gain); m.connect(am);
+  const b=nz('brown',t,dur), bg=gn(.5); b.connect(bq('lowpass',500)).connect(bg).connect(am);
+  const g=gn(); am.connect(bq('lowpass',750,2)).connect(g).connect(OUT()); env(g,t,.35,.45,1.3,.5); return dur; }
+function whine(t){ const dur=1.6, o=osc('triangle',t,dur), f=o.frequency;
+  f.setValueAtTime(800,t); f.linearRampToValueAtTime(1500,t+.4); f.linearRampToValueAtTime(1100,t+.9); f.linearRampToValueAtTime(1300,t+1.2); f.linearRampToValueAtTime(900,t+1.55);
+  const v=osc('sine',t,dur); v.frequency.value=6; const vd=gn(30); v.connect(vd).connect(f);
+  const g=gn(); o.connect(bq('bandpass',1400,1)).connect(g).connect(OUT()); env(g,t,.1,.9,1.2,.3); return dur; }
+function howl(t){ const dur=3.4, g=gn(), bp=bq('bandpass',800,.8);
+  [['sine',1,1],['triangle',2,.25]].forEach(([ty,mul,lv])=>{ const o=osc(ty,t,dur), f=o.frequency;
+    f.setValueAtTime(420*mul,t); f.linearRampToValueAtTime(650*mul,t+.8); f.linearRampToValueAtTime(700*mul,t+2.2); f.linearRampToValueAtTime(520*mul,t+3.2);
+    const v=osc('sine',t,dur); v.frequency.value=5; const vd=gn(10*mul); v.connect(vd).connect(f); const og=gn(lv); o.connect(og).connect(bp); });
+  bp.connect(g).connect(OUT()); env(g,t,.45,.9,2.3,.6); return dur; }
+function squeak(t){ [[0,1],[.2,.92]].forEach(([at,k])=>{ const tt=t+at, o=osc('square',tt,.16), f=o.frequency;
+  f.setValueAtTime(1600*k,tt); f.linearRampToValueAtTime(2800*k,tt+.06); f.linearRampToValueAtTime(2200*k,tt+.14);
+  const g=gn(); o.connect(bq('bandpass',2500,4)).connect(g).connect(OUT()); env(g,tt,.005,.9,.08,.06); }); return .45; }
+function kiss(t){ [0,.13,.26].forEach(at=>{ const tt=t+at, n=nz('white',tt,.04), g=gn(); n.connect(bq('bandpass',3500,8)).connect(g).connect(OUT()); env(g,tt,.002,1.4,.01,.03);
+  const o=osc('sine',tt,.04), og=gn(); o.frequency.setValueAtTime(2200,tt); o.frequency.linearRampToValueAtTime(3300,tt+.03); o.connect(og).connect(OUT()); env(og,tt,.002,.25,.01,.02); }); return .35; }
+function meow(t){ const dur=.8, o=osc('sawtooth',t,dur), f=o.frequency; f.setValueAtTime(550,t); f.linearRampToValueAtTime(760,t+.25); f.linearRampToValueAtTime(470,t+.75);
+  const f1=bq('bandpass',900,5), q=f1.frequency; q.setValueAtTime(900,t); q.linearRampToValueAtTime(2400,t+.25); q.linearRampToValueAtTime(1100,t+.75);
+  const f2=bq('bandpass',3000,6), g=gn(), g2=gn(.3); o.connect(f1).connect(g); o.connect(f2).connect(g2).connect(g); g.connect(OUT()); env(g,t,.06,1.3,.45,.25); return dur; }
+function bell(t,f,dec,lv=1){ [[1,1],[2,.3],[3,.12],[4.2,.05]].forEach(([m,a])=>{ const o=osc('sine',t,dec), g=gn(); o.frequency.value=f*m; o.connect(g).connect(OUT()); env(g,t,.004,.5*a*lv,0,dec*(m===1?1:.6)); }); }
+function doorbell(t){ bell(t,659,1.4); bell(t+.6,523,2); return 2.7; }
+function knock(t){ [0,.2,.4,.95,1.15].forEach(at=>{ const tt=t+at, n=nz('white',tt,.1), g=gn(); n.connect(bq('lowpass',650)).connect(g).connect(OUT()); env(g,tt,.002,1.6,0,.08);
+  const o=osc('sine',tt,.15), og=gn(); o.frequency.setValueAtTime(150,tt); o.frequency.exponentialRampToValueAtTime(80,tt+.12); o.connect(og).connect(OUT()); env(og,tt,.002,.9,0,.12); }); return 1.4; }
+function thunder(t){ const dur=5.5, b=nz('brown',t,dur), lp=bq('lowpass',420), g=gn(); lp.frequency.setValueAtTime(420,t); lp.frequency.exponentialRampToValueAtTime(140,t+dur);
+  b.connect(lp).connect(g).connect(OUT()); g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(1.6,t+.08);
+  for(let k=1;k<7;k++){ const tk=t+.08+k*.55+Math.random()*.2; g.gain.linearRampToValueAtTime((1.6-k*.2)*(.6+Math.random()*.5),tk); }
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  for(let k=0;k<14;k++){ const tt=t+Math.random()*.6, n=nz('white',tt,.03), cg=gn(); n.connect(bq('bandpass',1800+Math.random()*1500,2)).connect(cg).connect(OUT()); env(cg,tt,.002,.5,0,.03); } return dur; }
+function fireworks(t){ const o=osc('sine',t,1.25), og=gn(); o.frequency.setValueAtTime(900,t); o.frequency.exponentialRampToValueAtTime(2900,t+1.2); o.connect(og).connect(OUT()); env(og,t,.05,.18,1.05,.1);
+  const tb=t+1.3, b=nz('brown',tb,1.8), bg=gn(); b.connect(bq('lowpass',260)).connect(bg).connect(OUT()); env(bg,tb,.008,2,0,1.5);
+  const w=nz('white',tb,.4), wg=gn(); w.connect(bq('highpass',900)).connect(wg).connect(OUT()); env(wg,tb,.004,.8,0,.3);
+  for(let k=0;k<30;k++){ const tt=tb+.3+Math.random()*1.3, n=nz('white',tt,.03), cg=gn(); n.connect(bq('bandpass',2500+Math.random()*2500,3)).connect(cg).connect(OUT()); env(cg,tt,.001,.35+Math.random()*.4,0,.025); } return 3.3; }
+function vacuum(t){ const dur=5, g=gn(), o=osc('sawtooth',t,dur); o.frequency.setValueAtTime(70,t); o.frequency.linearRampToValueAtTime(118,t+.9);
+  const og=gn(.25); o.connect(bq('lowpass',420)).connect(og).connect(g);
+  const n=nz('white',t,dur), ng=gn(.7); n.connect(bq('bandpass',1200,.7)).connect(ng).connect(g);
+  const h=nz('white',t,dur), hg=gn(.12); h.connect(bq('highpass',4500)).connect(hg).connect(g);
+  g.connect(OUT()); env(g,t,.9,.8,3.4,.7); return dur; }
+function horn(t){ [[0,.22],[.34,.65]].forEach(([at,len])=>{ const tt=t+at, g=gn(1); [415,523].forEach(f=>{ const o=osc('square',tt,len); o.frequency.value=f; o.connect(g); });
+  const out=gn(); g.connect(bq('lowpass',2200)).connect(out).connect(OUT()); env(out,tt,.015,.35,len-.05,.05); }); return 1.1; }
+
+const SOUNDS = [
+ ['dog','🐕 Σκυλίσιοι ήχοι','Τραβάνε την προσοχή, κάνουν τον σκύλο να γείρει το κεφάλι· χρήσιμοι και για εξοικείωση με γαβγίσματα άλλων σκύλων.',[
+   ['barkS','🐶','Γάβγισμα μικρού σκύλου',t=>barks(t,'s',[[0,1],[.22,1.05],[.42,.97]])],
+   ['barkM','🐕','Γάβγισμα μεσαίου σκύλου',t=>barks(t,'m',[[0,1],[.3,1.04]])],
+   ['barkL','🐕‍🦺','Γάβγισμα μεγάλου σκύλου',t=>barks(t,'l',[[0,1],[.42,.96]])],
+   ['barkN','🏘️','Γαβγίσματα γειτονιάς',t=>barks(t,'m',[[0,1],[.33,1.05],[.9,.95],[1.25,1],[1.6,1.08],[2.4,.97],[2.75,1]])],
+   ['growl','😠','Γρύλισμα',growl],['whine','🥺','Κλαψούρισμα',whine],['howl','🐺','Ούρλιασμα',howl]]],
+ ['attn','🎯 Για προσοχή & παιχνίδι','Σύντομοι, «ενδιαφέροντες» ήχοι για να σε κοιτάξει — πάντα μαζί με ανταμοιβή, αλλιώς χάνουν την αξία τους.',[
+   ['squeak','🧸','Παιχνίδι που τσιρίζει',squeak],['kiss','😗','Φιλάκια / τσιπ-τσιπ',kiss],['meow','🐈','Νιαούρισμα γάτας',meow]]],
+ ['desens','🏠 Απευαισθητοποίηση (ήχοι που φοβίζουν)','Για σταδιακή εξοικείωση: ξεκίνα πολύ χαμηλά, με επανάληψη, ενώ ο σκύλος τρώει ή παίζει.',[
+   ['doorbell','🔔','Κουδούνι πόρτας',doorbell],['knock','🚪','Χτύπημα πόρτας',knock],['thunder','⛈️','Βροντή',thunder],
+   ['fireworks','🎆','Βεγγαλικά / κροτίδες',fireworks],['vacuum','🧹','Ηλεκτρική σκούπα',vacuum],['horn','🚗','Κόρνα αυτοκινήτου',horn]]]
+];
+const SND_FN = {}; SOUNDS.forEach(c=>c[3].forEach(x=>SND_FN[x[0]]=x));
+function playSnd(id){ stopSnd(true); const a=ac(); const t=a.currentTime+.03; let d=1; try{ d=SND_FN[id][3](t); }catch(e){}
+  SND.cur=id; sndUI();
+  if(S.snd.loop) SND.loopT=setTimeout(()=>playSnd(id),(d+S.snd.gap)*1000);
+  else SND.endT=setTimeout(()=>{ SND.cur=null; sndUI(); },d*1000+100); }
+function stopSnd(quiet){ clearTimeout(SND.loopT); clearTimeout(SND.endT); if(SND.master){ try{ SND.master.disconnect(); }catch(e){} SND.master=null; } SND.cur=null; if(!quiet) sndUI(); }
+function sndSet(k,v){ S.snd[k]=v; save(); if(k==='vol' && SND.master) SND.master.gain.value=v; if(k==='loop' && !v){ clearTimeout(SND.loopT); } sndUI(); }
+function sndUI(){ document.querySelectorAll('[data-snd]').forEach(b=>b.classList.toggle('on',b.dataset.snd===SND.cur));
+  const st=$('#sndStop'); if(st) st.classList.toggle('hide',!SND.cur);
+  const vp=$('#sndVolP'); if(vp) vp.textContent=Math.round(S.snd.vol*100)+'%'; }
+function soundsView(){ return `
+  <div class="card sndctl" style="margin-bottom:12px">
+   <div class="row" style="gap:14px">
+    <label class="small" style="flex:1;min-width:200px">🔊 Ένταση <b id="sndVolP">${Math.round(S.snd.vol*100)}%</b>
+     <input type="range" min="0.03" max="1" step="0.01" value="${S.snd.vol}" oninput="sndSet('vol',+this.value)" style="accent-color:var(--red)"></label>
+    <label class="chk" style="padding:4px 0"><input type="checkbox" ${S.snd.loop?'checked':''} onchange="sndSet('loop',this.checked)"><span>🔁 Επανάληψη κάθε
+     <select style="width:auto;padding:2px 6px;margin:0" onchange="sndSet('gap',+this.value)" onclick="event.stopPropagation()">${[2,5,10,20,30].map(x=>`<option ${S.snd.gap===x?'selected':''} value="${x}">${x}″</option>`).join('')}</select></span></label>
+    <button class="btn ${SND.cur?'':'hide'}" id="sndStop" onclick="stopSnd()">⏹ Σταμάτα</button>
+   </div></div>
+  ${SOUNDS.map(([k,title,desc,list])=>`<h2>${title}</h2><p class="sub small">${desc}</p>
+   <div class="grid sndgrid">${list.map(([id,ic,n])=>`<button class="sndbtn ${SND.cur===id?'on':''}" data-snd="${id}" onclick="SND.cur===this.dataset.snd?stopSnd():playSnd(this.dataset.snd)"><span class="ic">${ic}</span><span>${n}</span></button>`).join('')}</div>`).join('')}
+  <h2>🧠 Πρόγραμμα απευαισθητοποίησης σε θορύβους</h2>
+  <div class="card"><ol class="steps">
+   <li>Διάλεξε <b>έναν</b> ήχο (π.χ. βεγγαλικά) και βάλε την ένταση <b>τόσο χαμηλά</b> ώστε ο σκύλος να τον προσέχει ελάχιστα ή καθόλου (συνήθως 3–10%).</li>
+   <li>Ενεργοποίησε <b>🔁 Επανάληψη</b> και παίξε τον ήχο <b>ενώ τρώει, μασάει κόνγκ ή παίζετε</b> — ο ήχος να «προβλέπει» κάτι καλό. Όταν σταματά ο ήχος, σταματούν και οι λιχουδιές.</li>
+   <li>5–10 λεπτά τη μέρα. <b>Αύξανε την ένταση λίγο (5%)</b> μόνο όταν είναι εντελώς χαλαρός σε 2–3 συνεχόμενες συνεδρίες.</li>
+   <li>Αν δεις σημάδια φόβου (τρέμει, κρύβεται, λαχανιάζει, αυτιά πίσω, σταματά να τρώει) → <b>σταμάτα και γύρνα 2 βήματα πίσω</b>.</li>
+   <li>Ξεκίνα <b>εβδομάδες πριν</b> από περιόδους βεγγαλικών (Πάσχα, Πρωτοχρονιά) ή καλοκαιρινών καταιγίδων.</li></ol>
+   <div class="info small">Για καλύτερα αποτελέσματα, σύνδεσε το κινητό σε ηχείο — τα βαθιά (μπάσα) της βροντής και των βεγγαλικών δεν βγαίνουν καλά από μικρά ηχεία.</div>
+   <div class="warn small">⚠️ Μην παίζεις ήχους δυνατά για να «συνηθίσει» με τη μία — αυτό (flooding) συχνά <b>αυξάνει</b> τον φόβο. Μην χρησιμοποιείς γαβγίσματα ή γρυλίσματα για να πειράξεις ή να τρομάξεις τον σκύλο. Σε σοβαρή φοβία θορύβων μίλα με κτηνίατρο.</div></div>
+  <p class="small muted" style="margin-top:10px">Οι ήχοι δημιουργούνται μέσα στην εφαρμογή (σύνθεση ήχου), δουλεύουν offline και δεν στέλνουν τίποτα στο ίντερνετ. Δεν είναι ηχογραφήσεις, οπότε ακούγονται λίγο «συνθετικοί» — αρκετοί σκύλοι όμως αντιδρούν κανονικά.</p>`; }
 /* ---------- Σφυρίχτρα σκύλου ----------
    Ήχος από το ηχείο της συσκευής (Web Audio). Τα ηχεία κινητών/laptop φτάνουν συνήθως έως ~18–20 kHz,
    οπότε δεν είναι «αληθινή» υπερηχητική σφυρίχτρα (23–54 kHz) — στα 16–20 kHz όμως ελάχιστοι ενήλικες την ακούν,
@@ -878,6 +996,7 @@ document.addEventListener('keydown',e=>{ if(e.code==='Space' && route==='train' 
 
 /* ---------- ΣΥΜΠΕΡΙΦΟΡΑ ---------- */
 function behav(){ return `<h1>🧠 Προβλήματα συμπεριφοράς</h1><p class="sub">Αιτίες, τι να κάνεις, τι να μην κάνεις και πότε χρειάζεσαι επαγγελματία.</p>
+  <div class="info">🔊 Για φόβο θορύβων (βεγγαλικά, βροντές, σκούπα) ή γαβγίσματα άλλων σκύλων, δες τους <a href="#" onclick="go('train','sounds');return false">ήχους απευαισθητοποίησης</a> στην Εκπαίδευση.</div>
   <div class="warn">Κάθε ξαφνική αλλαγή συμπεριφοράς (επιθετικότητα, ατυχήματα τουαλέτας, υπερβολικό γλείψιμο) μπορεί να έχει <b>ιατρική αιτία</b> (πόνος, θυρεοειδής, ουρολοίμωξη). Πρώτα κτηνίατρος.</div>
   <div class="grid g3">${PROBLEMS.map((p,i)=>`<div class="card click" onclick="probModal(${i})"><h3>${p.ic} ${p.n}</h3><div class="small muted">${p.why.slice(0,2).join(' · ')}…</div></div>`).join('')}</div>
   <h2>🐕 Γλώσσα σώματος — τι λέει ο σκύλος</h2>
