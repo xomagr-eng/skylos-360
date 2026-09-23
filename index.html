@@ -122,6 +122,9 @@ ol.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:26p
 .phnote{font-size:11px;color:var(--mut);max-width:240px}
 .phcap{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.35;word-break:break-word}
 .phcap a{color:var(--mut);text-decoration:underline}
+.big-btn.wh{background:radial-gradient(circle at 35% 30%,#ffd44d,var(--gold) 60%,#a37700);color:#111;touch-action:none;-webkit-user-select:none;user-select:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:30px}
+.big-btn.wh.on{box-shadow:0 0 0 10px rgba(245,179,1,.25),0 0 0 22px rgba(245,179,1,.12),0 10px 30px rgba(245,179,1,.45);transform:scale(.97)}
+details summary::-webkit-details-marker{color:var(--cyan)}
 .muted{color:var(--mut)}
 .small{font-size:13px}
 .right{margin-left:auto}
@@ -129,7 +132,7 @@ ol.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:26p
 footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
 @media(max-width:600px){
   h1{font-size:21px} .logo{font-size:17px}
-  .top{gap:8px} #installBtn{padding:5px 9px;font-size:12px} #installBtn:not(.hide)+.dogchip{max-width:38vw} .big-btn{width:140px;height:140px}
+  .top{gap:8px} #installBtn{padding:5px 9px;font-size:15px} #installBtn .ibl{display:none} #installBtn:not(.hide)+.dogchip{max-width:38vw} .big-btn{width:140px;height:140px}
   .bcs{grid-template-columns:repeat(5,1fr)}
   th,td{padding:6px 5px}
 }
@@ -140,7 +143,7 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
 <header>
   <div class="top">
     <div class="logo">🐕 ΣΚΥΛΟΣ <b>360°</b></div>
-    <button class="btn sm hide" id="installBtn" onclick="doInstall()" style="margin-left:auto">📲 Εγκατάσταση</button>
+    <button class="btn sm hide" id="installBtn" onclick="doInstall()" style="margin-left:auto" title="Εγκατάσταση εφαρμογής">📲<span class="ibl"> Εγκατάσταση</span></button>
     <div class="dogchip" id="dogchip" onclick="go('profile')">🐾 <span id="dogchipTxt">Φτιάξε προφίλ σκύλου</span></div>
   </div>
   <nav id="nav"></nav>
@@ -594,7 +597,7 @@ const FOOD_GUIDE = [
 /* ΣΚΥΛΟΣ 360° — λογική εφαρμογής */
 const KEY = 'skylos360';
 const DEF = {p:{name:'',breed:'',sex:'m',birth:'',weight:'',target:'',neut:false,act:'normal',goal:'keep',coat:'short',ears:'floppy',kcalkg:3700,avatar:'🐕',vet:'',vetTel:''},
-  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5};
+  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,wh:{f:2900,pat:'two',vol:0.6}};
 let S;
 try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||'{}')); S.p = Object.assign(structuredClone(DEF.p), S.p||{}); }catch(e){ S = structuredClone(DEF); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -651,6 +654,7 @@ function socPct(){ let tot=0,s=0; Object.entries(SOCIAL).forEach(([k,a])=>a.forE
 const ROUTES = [['home','🏠 Σήμερα'],['train','🎓 Εκπαίδευση'],['behav','🧠 Συμπεριφορά'],['food','🍖 Διατροφή'],['groom','🛁 Περιποίηση'],['health','🩺 Υγεία'],['gear','🎒 Αξεσουάρ'],['breeds','📚 Φυλές'],['profile','🐾 Προφίλ']];
 let route = (location.hash||'#home').slice(1).split('/')[0]; if(!ROUTES.find(r=>r[0]===route)) route='home';
 const sub = {train:'cmds',food:'calc',groom:'plan',health:'vacc'};
+{ const hs=location.hash.slice(1).split('/'); if(hs[1]) sub[route]=hs[1]; } /* π.χ. #train/tools */
 let filt = {cmd:'Όλα',gear:'Όλα',tox:'',breed:''};
 function go(r,s){ route=r; if(s) sub[r]=s; location.hash=r; render(); window.scrollTo(0,0); }
 function renderNav(){ $('#nav').innerHTML = ROUTES.map(([k,t])=>`<button class="${k===route?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
@@ -739,13 +743,11 @@ function train(){
     <div class="grid g3">${Object.entries(SOCIAL).map(([k,a])=>{const n=a.filter((_,i)=>S.soc[k+i]).length; return `<div class="card"><div class="row"><h3>${k}</h3><span class="right pill ${n>=Math.min(7,a.length)?'p-cyan':'p-gold'}">${n}/${a.length}</span></div>
       ${a.map((x,i)=>`<label class="chk ${S.soc[k+i]?'done':''}"><input type="checkbox" ${S.soc[k+i]?'checked':''} onchange="S.soc['${k}${i}']=this.checked;save();render()"><span>${x}</span></label>`).join('')}</div>`}).join('')}</div>`;
   }
-  else if(sub.train==='tools'){ body=`<div class="grid g3">
+  else if(sub.train==='tools'){ body=`${whistleCard()}<div class="grid g3" style="margin-top:12px">
     <div class="card" style="text-align:center"><h3>🔔 Clicker</h3><p class="small muted">Πάτα (ή Space) τη στιγμή της σωστής συμπεριφοράς → μετά λιχουδιά.</p>
       <button class="big-btn" id="clk" onpointerdown="clickSound();repCount()">CLICK</button>
       <div class="row" style="justify-content:center;margin-top:10px"><span>Κλικ: <b id="reps">${tools.reps}</b></span><button class="btn sm ghost" onclick="tools.reps=0;$('#reps').textContent=0">Μηδενισμός</button></div>
       <div class="small muted" style="margin-top:6px">Φόρτιση: 15 × (κλικ → λιχουδιά) χωρίς να ζητάς τίποτα.</div></div>
-    <div class="card" style="text-align:center"><h3>📣 Σφυρίχτρα ανάκλησης</h3><p class="small muted">Διπλό σφύριγμα = «Έλα!». Ζευγάρωσέ το πρώτα με το καλύτερο φαγητό.</p>
-      <button class="big-btn" style="background:radial-gradient(circle at 35% 30%,#ffd44d,var(--gold) 60%,#a37700);color:#111" onclick="whistle()">ΣΦΥΡΙΞΕ</button></div>
     <div class="card" style="text-align:center"><h3>⏱️ Χρονόμετρο προπόνησης</h3>
       <div class="timer" id="tmr">${fmtT(tools.left)}</div>
       <div class="row" style="justify-content:center">${[3,5,10,15].map(m=>`<button class="btn sm ghost" onclick="setT(${m})">${m}′</button>`).join('')}</div>
@@ -756,7 +758,7 @@ function train(){
       <div id="score" style="margin-top:10px"></div></div>
     <div class="card"><h3>🍬 Λιχουδιές σήμερα</h3><p class="small">Όριο 10% των θερμίδων: <b>${Math.round(calc().treats)||'—'} kcal</b>.</p>
       <p class="small muted">Για πολλές επαναλήψεις, χρησιμοποίησε μέρος της ημερήσιας ξηράς τροφής (${calc().grams?Math.round(calc().grams*0.2)+' g ≈ 20%':'—'}) και αφαίρεσέ το από τα γεύματα.</p></div>
-    </div>`; afterFns.push(renderScore);
+    </div>`; afterFns.push(renderScore, whUI);
   }
   else if(sub.train==='log'){ const last7=S.log.filter(l=>diffDays(today(),l.d)<7); const mins=last7.reduce((a,l)=>a+(+l.min||0),0);
     body=`<div class="grid g2"><div class="card"><h3>➕ Νέα προπόνηση</h3>
@@ -774,7 +776,7 @@ function train(){
   else { body=`<div class="grid g2">${PRINCIPLES.map(p=>`<div class="card"><h3>${p.ic} ${p.t}</h3><div class="small">${p.d}</div></div>`).join('')}</div>
     <div class="info">Διεθνείς οργανισμοί εκπαιδευτών και κτηνιάτρων συμπεριφοράς συστήνουν μεθόδους βασισμένες στην ανταμοιβή. Οι μέθοδοι τιμωρίας (πνιγμός, ηλεκτρισμός, «alpha roll») συνδέονται με περισσότερο άγχος και επιθετικότητα.</div>`; }
   return `<h1>🎓 Εκπαίδευση</h1><p class="sub">Βήμα-βήμα μαθήματα με θετική ενίσχυση, πρόγραμμα ανά ηλικία, κοινωνικοποίηση και εργαλεία προπόνησης.</p>
-  ${subnav('train',[['cmds','📋 Εντολές'],['plan','🗓️ Πρόγραμμα 6 εβδ.'],['soc','🌍 Κοινωνικοποίηση'],['tools','🔔 Clicker & εργαλεία'],['log','📒 Ημερολόγιο'],['prin','📖 Αρχές']])}${body}`;
+  ${subnav('train',[['cmds','📋 Εντολές'],['plan','🗓️ Πρόγραμμα 6 εβδ.'],['soc','🌍 Κοινωνικοποίηση'],['tools','📣 Σφυρίχτρα & clicker'],['log','📒 Ημερολόγιο'],['prin','📖 Αρχές']])}${body}`;
 }
 function cmdModal(id){ const c=COMMANDS.find(x=>x.id===id); const l=S.cmd[id]||0;
   openModal(`<h2 style="margin-top:0">${c.n}</h2><span class="pill p-vio">${c.cat}</span><span class="pill">Ηλικία ${c.age}</span><span class="pill p-gold">Δυσκολία ${'★'.repeat(c.d)}</span>
@@ -807,10 +809,63 @@ function clickSound(){ const a=ac(), t=a.currentTime; const b=a.createBuffer(1,a
   s.connect(f).connect(g).connect(a.destination); s.start(t);
   const o=a.createOscillator(), og=a.createGain(); o.frequency.value=2400; og.gain.setValueAtTime(.25,t); og.gain.exponentialRampToValueAtTime(.001,t+.02); o.connect(og).connect(a.destination); o.start(t); o.stop(t+.03); }
 function repCount(){ tools.reps++; const r=$('#reps'); if(r) r.textContent=tools.reps; }
-function whistle(){ const a=ac(); [0,.45].forEach(off=>{ const t=a.currentTime+off, o=a.createOscillator(), g=a.createGain(), l=a.createOscillator(), lg=a.createGain();
-  o.frequency.value=2900; l.frequency.value=28; lg.gain.value=90; l.connect(lg).connect(o.frequency);
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.35,t+.03); g.gain.setValueAtTime(.35,t+.3); g.gain.linearRampToValueAtTime(0,t+.36);
-  o.connect(g).connect(a.destination); o.start(t); l.start(t); o.stop(t+.4); l.stop(t+.4); }); }
+/* ---------- Σφυρίχτρα σκύλου ----------
+   Ήχος από το ηχείο της συσκευής (Web Audio). Τα ηχεία κινητών/laptop φτάνουν συνήθως έως ~18–20 kHz,
+   οπότε δεν είναι «αληθινή» υπερηχητική σφυρίχτρα (23–54 kHz) — στα 16–20 kHz όμως ελάχιστοι ενήλικες την ακούν,
+   ενώ ο σκύλος ακούει άνετα (ακοή σκύλου έως ~45 kHz). */
+S.wh = Object.assign({f:2900, pat:'two', vol:0.6}, S.wh||{});
+const WH_PATS = [['hold','✋ Κράτα πατημένο'],['one','— 1 μακρύ'],['two','•• 2 σύντομα'],['three','••• 3 σύντομα'],['trill','〰️ Τρίλια']];
+function whMax(){ const sr = AC ? AC.sampleRate : 48000; return Math.min(22000, Math.floor(sr/2 - 1000)); }
+function whPresets(){ return [['🔊 Ανάκληση (ακουστή)',2900],['🎵 Υψηλή',8000],['🔈 Πολύ υψηλή',14000],['🤫 Σχεδόν αθόρυβη για ανθρώπους',18000],['🐕 Μέγιστη συσκευής',whMax()]]; }
+const WH = {osc:null, gain:null, lfo:null, busy:false, t:null};
+function whStart(){ const a=ac(), t=a.currentTime, f=Math.min(S.wh.f, whMax());
+  whStop(true);
+  const o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f;
+  if(f < 6000){ const l=a.createOscillator(), lg=a.createGain(); l.frequency.value=S.wh.pat==='trill'?14:26; lg.gain.value=f*(S.wh.pat==='trill'?0.06:0.03); l.connect(lg).connect(o.frequency); l.start(t); WH.lfo=l; }
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.5*S.wh.vol, t+0.02);
+  o.connect(g).connect(a.destination); o.start(t); WH.osc=o; WH.gain=g; whLed(true); }
+function whStop(now){ if(!WH.osc) return; const a=ac(), t=a.currentTime, o=WH.osc, g=WH.gain, l=WH.lfo;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0, t+(now?0.005:0.03));
+  o.stop(t+0.05); if(l) l.stop(t+0.05); WH.osc=WH.gain=WH.lfo=null; whLed(false); }
+function whLed(on){ const b=$('#whBtn'); if(b) b.classList.toggle('on',on); }
+function whPattern(){ if(WH.busy) return; const seq = {one:[[0,900]], two:[[0,280],[420,280]], three:[[0,220],[340,220],[680,220]], trill:[[0,1100]]}[S.wh.pat];
+  WH.busy=true; seq.forEach(([at,len])=>{ setTimeout(whStart, at); setTimeout(()=>whStop(), at+len); });
+  setTimeout(()=>WH.busy=false, seq[seq.length-1][0]+seq[seq.length-1][1]+60); }
+function whDown(e){ e.preventDefault(); ac(); if(S.wh.pat==='hold') whStart(); else whPattern(); }
+function whUp(){ if(S.wh.pat==='hold') whStop(); }
+function whSet(k,v){ S.wh[k]=v; save(); whUI(); }
+function whUI(){ const f=Math.min(S.wh.f, whMax());
+  const fv=$('#whF'); if(fv) fv.textContent = f>=1000 ? (f/1000).toFixed(f%1000?1:0)+' kHz' : f+' Hz';
+  const sl=$('#whSl'); if(sl){ sl.max=whMax(); sl.value=f; }
+  const hint=$('#whHint'); if(hint) hint.innerHTML = f<6000 ? 'Ακουστή σε όλους — ιδανική για ανάκληση σε απόσταση.' : f<16000 ? 'Υψηλή — ακούγεται από ανθρώπους, ξεχωρίζει από τους θορύβους.' : f<18500 ? 'Οι περισσότεροι ενήλικες την ακούν ελάχιστα· ο σκύλος καθαρά.' : 'Κοντά στο όριο του ηχείου — πολλά κινητά δεν την αναπαράγουν. Δες αν ο σκύλος κουνά τα αυτιά του.';
+  document.querySelectorAll('[data-whp]').forEach(b=>b.classList.toggle('ghost', +b.dataset.whp!==S.wh.f));
+  document.querySelectorAll('[data-whpat]').forEach(b=>b.classList.toggle('ghost', b.dataset.whpat!==S.wh.pat));
+  const v=$('#whV'); if(v) v.value=S.wh.vol;
+  const lb=$('#whLbl'); if(lb) lb.textContent = S.wh.pat==='hold' ? 'ΚΡΑΤΑ' : 'ΣΦΥΡΙΞΕ'; }
+function whistle(){ const p=S.wh.pat; S.wh.pat='two'; const f=S.wh.f; S.wh.f=2900; whPattern(); setTimeout(()=>{ S.wh.pat=p; S.wh.f=f; }, 900); }
+function whistleCard(){ return `<div class="card"><div class="row" style="align-items:flex-start;gap:18px">
+  <div style="text-align:center;flex:0 0 auto;margin:auto">
+    <button class="big-btn wh" id="whBtn" onpointerdown="whDown(event)" onpointerup="whUp()" onpointerleave="whUp()" onpointercancel="whUp()" oncontextmenu="return false"><div>📣</div><div id="whLbl" style="font-size:18px">ΣΦΥΡΙΞΕ</div></button>
+    <div class="stat" style="margin-top:8px"><span id="whF"></span></div>
+  </div>
+  <div style="flex:1;min-width:250px">
+    <h3>📣 Σφυρίχτρα σκύλου</h3>
+    <div class="small muted" style="margin-bottom:6px">Συχνότητα</div>
+    <div class="row" style="gap:6px">${whPresets().map(([t,f])=>`<button class="btn sm" data-whp="${f}" onclick="whSet('f',${f})">${t}</button>`).join('')}</div>
+    <input type="range" id="whSl" min="1000" max="22000" step="100" value="${S.wh.f}" oninput="S.wh.f=+this.value;whUI()" onchange="save()" style="margin-top:8px;accent-color:var(--red)">
+    <div class="small" id="whHint" style="min-height:2.6em"></div>
+    <div class="small muted" style="margin:8px 0 6px">Μοτίβο</div>
+    <div class="row" style="gap:6px">${WH_PATS.map(([k,t])=>`<button class="btn sm" data-whpat="${k}" onclick="whSet('pat','${k}')">${t}</button>`).join('')}</div>
+    <label class="small muted" style="display:block;margin-top:10px">Ένταση <input type="range" id="whV" min="0.1" max="1" step="0.05" value="${S.wh.vol}" oninput="S.wh.vol=+this.value" onchange="save()" style="accent-color:var(--red)"></label>
+  </div></div>
+  <details style="margin-top:10px"><summary class="small" style="cursor:pointer;color:var(--cyan)">ℹ️ Πώς να τη χρησιμοποιήσεις σωστά</summary>
+   <ol class="steps small"><li><b>Φόρτισέ τη πρώτα:</b> σφύριγμα → αμέσως λιχουδιά υψηλής αξίας, 10–20 φορές για 2–3 μέρες, χωρίς να ζητάς τίποτα. Η σφυρίχτρα δεν «διατάζει» μόνη της.</li>
+   <li><b>Ένα σήμα = μία σημασία:</b> π.χ. «•• 2 σύντομα» πάντα = «Έλα!». Μην αλλάζεις συχνότητα και μοτίβο για την ίδια εντολή.</li>
+   <li><b>Ανάκληση σε απόσταση:</b> η ακουστή (≈3 kHz) ταξιδεύει πιο μακριά. Οι πολύ υψηλές συχνότητες είναι για κοντινές αποστάσεις, όταν δεν θέλεις να ενοχλήσεις ανθρώπους.</li>
+   <li><b>Πριν χρησιμοποιήσεις υψηλές συχνότητες,</b> κοίτα αν ο σκύλος αντιδρά (αυτιά, στροφή κεφαλιού). Πολλά ηχεία κινητών δεν αναπαράγουν πάνω από ~18–20 kHz.</li></ol>
+   <div class="warn small">⚠️ Όχι κοντά στα αυτιά του σκύλου και όχι σε μέγιστη ένταση για πολλή ώρα. Ποτέ για τιμωρία ή για να τον τρομάξεις ώστε να σταματήσει να γαβγίζει — χαλάει την εμπιστοσύνη.</div>
+   <div class="small muted">Σημείωση: οι «σιωπηλές» σφυρίχτρες του εμπορίου φτάνουν τα 23–54 kHz. Καμία εφαρμογή κινητού δεν μπορεί να βγάλει τέτοιες συχνότητες, γιατί το ηχείο δεν το υποστηρίζει. Εδώ φτάνουμε έως το όριο της συσκευής σου (${(whMax()/1000).toFixed(0)} kHz).</div>
+  </details></div>`; }
 function beep(n=3){ const a=ac(); for(let i=0;i<n;i++){ const t=a.currentTime+i*.3, o=a.createOscillator(), g=a.createGain(); o.frequency.value=880; g.gain.setValueAtTime(.3,t); g.gain.exponentialRampToValueAtTime(.001,t+.25); o.connect(g).connect(a.destination); o.start(t); o.stop(t+.26);} }
 const fmtT = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 function setT(m){ clearInterval(tools.iv); tools.run=false; tools.len=m*60; tools.left=tools.len; const e=$('#tmr'); if(e) e.textContent=fmtT(tools.left); const b=$('#tbtn'); if(b) b.textContent='▶ Έναρξη'; }
@@ -1186,7 +1241,7 @@ async function doInstall(){
 }
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 showInstall();
-window.addEventListener('hashchange',()=>{ const r=location.hash.slice(1); if(r!==route && ROUTES.find(x=>x[0]===r)){ route=r; render(); } });
+window.addEventListener('hashchange',()=>{ const [r,sb]=location.hash.slice(1).split('/'); if(ROUTES.find(x=>x[0]===r) && (r!==route || (sb && sub[r]!==sb))){ route=r; if(sb) sub[r]=sb; render(); } });
 render();
 
 </script>
