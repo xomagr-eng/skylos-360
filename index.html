@@ -128,7 +128,9 @@ details summary::-webkit-details-marker{color:var(--cyan)}
 .sndgrid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
 .sndctl{position:sticky;top:96px;z-index:5}
 @media(max-width:600px){ .sndgrid{grid-template-columns:1fr 1fr;gap:8px} .sndbtn{padding:9px;font-size:13px;gap:8px} .sndbtn .ic{width:38px;height:38px;font-size:22px} .sndctl{position:static} }
-.sndbtn{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);color:#fff;border-radius:14px;padding:12px;cursor:pointer;font-weight:700;font-size:14px;text-align:left;font-family:inherit;transition:.15s}
+.recdot{color:var(--red2);font-size:10px;vertical-align:middle}
+.sndgrid .phcap{padding:0 4px}
+.sndbtn{width:100%;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);color:#fff;border-radius:14px;padding:12px;cursor:pointer;font-weight:700;font-size:14px;text-align:left;font-family:inherit;transition:.15s}
 .sndbtn .ic{font-size:28px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--card2);flex:0 0 auto}
 .sndbtn:hover{border-color:var(--red)}
 .sndbtn.on{border-color:var(--red);background:var(--redbg);box-shadow:0 0 0 3px rgba(228,34,47,.25)}
@@ -158,7 +160,7 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
   <nav id="nav"></nav>
 </header>
 <main id="app"></main>
-<footer>ΣΚΥΛΟΣ 360° · λειτουργεί offline · τα δεδομένα αποθηκεύονται μόνο στη συσκευή σου · καμία σύνδεση με τρίτους, εκτός αν ζητήσεις φωτογραφία (Wikimedia Commons) ή βίντεο (YouTube) · Οι πληροφορίες υγείας είναι γενικές — για κάθε πρόβλημα συμβουλέψου κτηνίατρο.</footer>
+<footer>ΣΚΥΛΟΣ 360° · λειτουργεί offline · τα δεδομένα αποθηκεύονται μόνο στη συσκευή σου · καμία σύνδεση με τρίτους, εκτός αν ζητήσεις φωτογραφίες/ηχογραφήσεις (Wikimedia Commons) ή βίντεο (YouTube) · Οι πληροφορίες υγείας είναι γενικές — για κάθε πρόβλημα συμβουλέψου κτηνίατρο.</footer>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox"><button class="mx" onclick="closeModal()">✕</button><div id="mbody"></div></div></div>
 <div id="toast"></div>
 <script>
@@ -606,7 +608,7 @@ const FOOD_GUIDE = [
 /* ΣΚΥΛΟΣ 360° — λογική εφαρμογής */
 const KEY = 'skylos360';
 const DEF = {p:{name:'',breed:'',sex:'m',birth:'',weight:'',target:'',neut:false,act:'normal',goal:'keep',coat:'short',ears:'floppy',kcalkg:3700,avatar:'🐕',vet:'',vetTel:''},
-  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,wh:{f:2900,pat:'two',vol:0.6},snd:{vol:0.35,loop:false,gap:5}};
+  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,wh:{f:2900,pat:'two',vol:0.6},snd:{vol:0.35,loop:false,gap:5,src:'synth'}};
 let S;
 try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||'{}')); S.p = Object.assign(structuredClone(DEF.p), S.p||{}); }catch(e){ S = structuredClone(DEF); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -769,7 +771,7 @@ function train(){
       <p class="small muted">Για πολλές επαναλήψεις, χρησιμοποίησε μέρος της ημερήσιας ξηράς τροφής (${calc().grams?Math.round(calc().grams*0.2)+' g ≈ 20%':'—'}) και αφαίρεσέ το από τα γεύματα.</p></div>
     </div>`; afterFns.push(renderScore, whUI);
   }
-  else if(sub.train==='sounds'){ body=soundsView(); }
+  else if(sub.train==='sounds'){ if(S.snd.src==='rec' && recState==='idle') setTimeout(recLoad); body=soundsView(); }
   else if(sub.train==='log'){ const last7=S.log.filter(l=>diffDays(today(),l.d)<7); const mins=last7.reduce((a,l)=>a+(+l.min||0),0);
     body=`<div class="grid g2"><div class="card"><h3>➕ Νέα προπόνηση</h3>
       <div class="grid g2" style="gap:0 10px"><label class="f">Ημερομηνία<input type="date" id="lgD" value="${today()}"></label>
@@ -821,8 +823,8 @@ function clickSound(){ const a=ac(), t=a.currentTime; const b=a.createBuffer(1,a
 function repCount(){ tools.reps++; const r=$('#reps'); if(r) r.textContent=tools.reps; }
 
 /* ---------- Ήχοι για τον σκύλο (σύνθεση Web Audio — offline, χωρίς τρίτους, χωρίς πνευματικά δικαιώματα) ---------- */
-S.snd = Object.assign({vol:0.35, loop:false, gap:5}, S.snd||{});
-const SND = {master:null, loopT:null, endT:null, cur:null, nb:{}};
+S.snd = Object.assign({vol:0.35, loop:false, gap:5, src:'synth'}, S.snd||{});
+const SND = {master:null, loopT:null, endT:null, cur:null, nb:{}, audio:null};
 function sMaster(){ const a=ac(); if(!SND.master){ SND.master=a.createGain(); const lim=a.createDynamicsCompressor(); lim.threshold.value=-6; lim.knee.value=3; lim.ratio.value=20; lim.attack.value=.002; lim.release.value=.2; /* limiter: χωρίς παραμόρφωση */ SND.master.connect(lim).connect(a.destination); } SND.master.gain.value=S.snd.vol; return SND.master; }
 function noiseBuf(type){ if(SND.nb[type]) return SND.nb[type]; const a=ac(), n=a.sampleRate*3, b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); let last=0;
   for(let i=0;i<n;i++){ const w=Math.random()*2-1; if(type==='brown'){ last=(last+0.02*w)/1.02; d[i]=last*3.5; } else d[i]=w; } return SND.nb[type]=b; }
@@ -897,16 +899,65 @@ const SOUNDS = [
    ['fireworks','🎆','Βεγγαλικά / κροτίδες',fireworks],['vacuum','🧹','Ηλεκτρική σκούπα',vacuum],['horn','🚗','Κόρνα αυτοκινήτου',horn]]]
 ];
 const SND_FN = {}; SOUNDS.forEach(c=>c[3].forEach(x=>SND_FN[x[0]]=x));
-function playSnd(id){ stopSnd(true); const a=ac(); const t=a.currentTime+.03; let d=1; try{ d=SND_FN[id][3](t); }catch(e){}
+/* Πραγματικές ηχογραφήσεις από τη Wikimedia Commons (επιλεγμένες χειροκίνητα βάσει περιγραφής & άδειας).
+   Φορτώνουν ΜΟΝΟ όταν ο χρήστης διαλέξει «Πραγματικές ηχογραφήσεις» (η επιλογή μένει μόνο στη συσκευή). [αρχείο, ετικέτα] */
+const REC = {
+ barkS:['Barking of a dog.ogg','Γάβγισμα σκύλου'], barkM:['Perro ladrando.ogg','Μεσαίος σκύλος γαβγίζει μέσα στο σπίτι'],
+ barkL:['Rottweiler Barking.oga','Ροτβάιλερ γαβγίζει (μεγάλος σκύλος)'], barkN:['Barking dog in Rome.ogg','Σκύλος γαβγίζει στον δρόμο'],
+ growl:["Dogs'-Expectation-about-Signalers'-Body-Size-by-Virtue-of-Their-Growls-pone.0015175.s006.ogg",'Γρύλισμα μικρού σκύλου'],
+ whine:['Puppy at a night.ogg','Κουτάβι κλαίει τη νύχτα'], howl:['Jem howls.ogg','Ούρλιασμα (τσιουάουα)'],
+ squeak:['Rubber Duck Squeaker.ogg','Λαστιχένιο παιχνίδι που τσιρίζει'], meow:['Meow of a Siamese cat - freemaster2.wav','Νιαούρισμα γάτας Σιάμ'],
+ doorbell:['Doorbell-cheap-dingdong.ogg','Κουδούνι πόρτας (ντιν-ντον)'], knock:['Knock on door.wav','Χτύπημα πόρτας'],
+ thunder:['Thunder 01.ogg','Βροντή'], fireworks:['Fireworks in distance 5.ogg','Βεγγαλικά από απόσταση'],
+ vacuum:['Het aanstaan van een stofzuiger - SoundCloud - Beeld en Geluid.ogg','Ηλεκτρική σκούπα που ανάβει'], horn:['Car Horn.wav','Κόρνα αυτοκινήτου']
+};
+const RECM = {}; let recState = 'idle'; /* idle | load | ok | err */
+async function recLoad(){ if(recState==='load' || recState==='ok') return; recState='load'; if(route==='train') render();
+  try{ const files=[...new Set(Object.values(REC).map(r=>r[0]))];
+    const j=await wmApi('commons.wikimedia.org',{action:'query',prop:'videoinfo',viprop:'url|extmetadata|derivatives',titles:files.map(f=>'File:'+f).join('|')});
+    const by={}; ((j.query||{}).pages||[]).forEach(pg=>{ const vi=(pg.videoinfo||[])[0]; if(pg.missing||!vi) return; const m=vi.extmetadata||{};
+      const mp3=(vi.derivatives||[]).find(d=>/audio\/mpeg/.test(d.type||'')), src=((mp3&&mp3.src)||vi.url||'').split('?')[0];
+      if(!/^https:\/\/upload\.wikimedia\.org\//.test(src)) return;
+      by[pg.title.replace(/^File:/,'').replace(/_/g,' ')]={src, page:vi.descriptionurl, artist:plain(m.Artist&&m.Artist.value)||'Άγνωστος δημιουργός', lic:plain(m.LicenseShortName&&m.LicenseShortName.value)||'', licUrl:(m.LicenseUrl&&m.LicenseUrl.value)||''}; });
+    Object.entries(REC).forEach(([id,[f]])=>{ const r=by[f.replace(/_/g,' ')]; if(r) RECM[id]=r; });
+    recState = Object.keys(RECM).length ? 'ok' : 'err';
+  }catch(e){ recState='err'; }
+  if(route==='train') render(); }
+function sndSrc(v){ stopSnd(); S.snd.src=v; save(); if(v==='rec') recLoad(); render(); }
+const useRec = id => S.snd.src==='rec' && RECM[id];
+function playSnd(id){ stopSnd(true); SND.cur=id; sndUI();
+  if(useRec(id)){ const au=new Audio(); au.referrerPolicy='no-referrer'; au.preload='auto'; au.src=RECM[id].src; au.volume=Math.min(1,S.snd.vol); SND.audio=au;
+    au.onended=()=>{ if(SND.audio!==au) return; if(S.snd.loop) SND.loopT=setTimeout(()=>playSnd(id),S.snd.gap*1000); else { SND.cur=null; SND.audio=null; sndUI(); } };
+    au.onerror=()=>{ if(SND.audio!==au) return; SND.audio=null; toast('Η ηχογράφηση δεν φόρτωσε — παίζει ο συνθετικός ήχος'); playSynth(id); };
+    au.play().catch(()=>{}); return; }
+  playSynth(id); }
+function playSynth(id){ const a=ac(); const t=a.currentTime+.03; let d=1; try{ d=SND_FN[id][3](t); }catch(e){}
   SND.cur=id; sndUI();
   if(S.snd.loop) SND.loopT=setTimeout(()=>playSnd(id),(d+S.snd.gap)*1000);
   else SND.endT=setTimeout(()=>{ SND.cur=null; sndUI(); },d*1000+100); }
-function stopSnd(quiet){ clearTimeout(SND.loopT); clearTimeout(SND.endT); if(SND.master){ try{ SND.master.disconnect(); }catch(e){} SND.master=null; } SND.cur=null; if(!quiet) sndUI(); }
-function sndSet(k,v){ S.snd[k]=v; save(); if(k==='vol' && SND.master) SND.master.gain.value=v; if(k==='loop' && !v){ clearTimeout(SND.loopT); } sndUI(); }
+function stopSnd(quiet){ clearTimeout(SND.loopT); clearTimeout(SND.endT);
+  if(SND.audio){ const au=SND.audio; SND.audio=null; try{ au.pause(); au.removeAttribute('src'); au.load(); }catch(e){} }
+  if(SND.master){ try{ SND.master.disconnect(); }catch(e){} SND.master=null; } SND.cur=null; if(!quiet) sndUI(); }
+function sndSet(k,v){ S.snd[k]=v; save(); if(k==='vol'){ if(SND.master) SND.master.gain.value=v; if(SND.audio) SND.audio.volume=Math.min(1,v); } if(k==='loop' && !v){ clearTimeout(SND.loopT); } sndUI(); }
+function sndCell(id,ic,n){ const r=S.snd.src==='rec'?RECM[id]:null;
+  const lic = r ? (r.licUrl && /^https?:\/\//.test(r.licUrl) ? `<a href="${h(r.licUrl)}" target="_blank" rel="noopener noreferrer">${h(r.lic)}</a>` : h(r.lic)) : '';
+  const cap = S.snd.src!=='rec' ? '' : r ? `<div class="phcap">🎙️ ${h(REC[id][1])} · ${h(r.artist)} · ${lic} · <a href="${h(r.page)}" target="_blank" rel="noopener noreferrer">Commons</a></div>`
+    : recState==='ok' ? `<div class="phcap">🎹 Συνθετικός (δεν υπάρχει ελεύθερη ηχογράφηση)</div>` : '';
+  return `<div><button class="sndbtn ${SND.cur===id?'on':''}" data-snd="${id}" onclick="SND.cur===this.dataset.snd?stopSnd():playSnd(this.dataset.snd)"><span class="ic">${ic}</span><span>${n}${r?' <span class="recdot" title="πραγματική ηχογράφηση">●</span>':''}</span></button>${cap}</div>`; }
 function sndUI(){ document.querySelectorAll('[data-snd]').forEach(b=>b.classList.toggle('on',b.dataset.snd===SND.cur));
   const st=$('#sndStop'); if(st) st.classList.toggle('hide',!SND.cur);
   const vp=$('#sndVolP'); if(vp) vp.textContent=Math.round(S.snd.vol*100)+'%'; }
 function soundsView(){ return `
+  <div class="card" style="margin-bottom:12px">
+   <div class="small muted" style="margin-bottom:6px">Πηγή ήχων</div>
+   <div class="row" style="gap:6px">
+    <button class="btn sm ${S.snd.src==='rec'?'ghost':''}" onclick="sndSrc('synth')">🎹 Συνθετικοί (offline)</button>
+    <button class="btn sm ${S.snd.src==='rec'?'':'ghost'}" onclick="sndSrc('rec')">🎙️ Πραγματικές ηχογραφήσεις</button>
+    ${S.snd.src==='rec' ? (recState==='load' ? '<span class="small muted">Φόρτωση λίστας…</span>' : recState==='err' ? '<span class="small status-late">Δεν φόρτωσαν (σύνδεση;) — παίζουν οι συνθετικοί</span> <button class="btn sm ghost" onclick="recState=\'idle\';recLoad()">↻ Ξανά</button>' : '') : ''}
+   </div>
+   <div class="small muted" style="margin-top:6px">${S.snd.src==='rec'
+     ? '🎙️ Ηχογραφήσεις από τη <b>Wikimedia Commons</b> με ελεύθερες άδειες (δημιουργός & άδεια κάτω από κάθε ήχο). Όσο είναι επιλεγμένες, ο browser σου συνδέεται με τους servers της Wikimedia, που λαμβάνουν τη διεύθυνση IP σου (<a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy" target="_blank" rel="noopener noreferrer">πολιτική απορρήτου</a>). Χρειάζονται ίντερνετ. Η επιλογή μένει μόνο σε αυτή τη συσκευή.'
+     : '🎹 Οι ήχοι δημιουργούνται μέσα στην εφαρμογή: δουλεύουν offline και δεν στέλνουν τίποτα πουθενά. Για πιο ρεαλιστικό αποτέλεσμα διάλεξε «Πραγματικές ηχογραφήσεις».'}</div></div>
   <div class="card sndctl" style="margin-bottom:12px">
    <div class="row" style="gap:14px">
     <label class="small" style="flex:1;min-width:200px">🔊 Ένταση <b id="sndVolP">${Math.round(S.snd.vol*100)}%</b>
@@ -916,7 +967,7 @@ function soundsView(){ return `
     <button class="btn ${SND.cur?'':'hide'}" id="sndStop" onclick="stopSnd()">⏹ Σταμάτα</button>
    </div></div>
   ${SOUNDS.map(([k,title,desc,list])=>`<h2>${title}</h2><p class="sub small">${desc}</p>
-   <div class="grid sndgrid">${list.map(([id,ic,n])=>`<button class="sndbtn ${SND.cur===id?'on':''}" data-snd="${id}" onclick="SND.cur===this.dataset.snd?stopSnd():playSnd(this.dataset.snd)"><span class="ic">${ic}</span><span>${n}</span></button>`).join('')}</div>`).join('')}
+   <div class="grid sndgrid">${list.map(([id,ic,n])=>sndCell(id,ic,n)).join('')}</div>`).join('')}
   <h2>🧠 Πρόγραμμα απευαισθητοποίησης σε θορύβους</h2>
   <div class="card"><ol class="steps">
    <li>Διάλεξε <b>έναν</b> ήχο (π.χ. βεγγαλικά) και βάλε την ένταση <b>τόσο χαμηλά</b> ώστε ο σκύλος να τον προσέχει ελάχιστα ή καθόλου (συνήθως 3–10%).</li>
@@ -926,7 +977,7 @@ function soundsView(){ return `
    <li>Ξεκίνα <b>εβδομάδες πριν</b> από περιόδους βεγγαλικών (Πάσχα, Πρωτοχρονιά) ή καλοκαιρινών καταιγίδων.</li></ol>
    <div class="info small">Για καλύτερα αποτελέσματα, σύνδεσε το κινητό σε ηχείο — τα βαθιά (μπάσα) της βροντής και των βεγγαλικών δεν βγαίνουν καλά από μικρά ηχεία.</div>
    <div class="warn small">⚠️ Μην παίζεις ήχους δυνατά για να «συνηθίσει» με τη μία — αυτό (flooding) συχνά <b>αυξάνει</b> τον φόβο. Μην χρησιμοποιείς γαβγίσματα ή γρυλίσματα για να πειράξεις ή να τρομάξεις τον σκύλο. Σε σοβαρή φοβία θορύβων μίλα με κτηνίατρο.</div></div>
-  <p class="small muted" style="margin-top:10px">Οι ήχοι δημιουργούνται μέσα στην εφαρμογή (σύνθεση ήχου), δουλεύουν offline και δεν στέλνουν τίποτα στο ίντερνετ. Δεν είναι ηχογραφήσεις, οπότε ακούγονται λίγο «συνθετικοί» — αρκετοί σκύλοι όμως αντιδρούν κανονικά.</p>`; }
+  <p class="small muted" style="margin-top:10px">Συμβουλή: για απευαισθητοποίηση, οι πραγματικές ηχογραφήσεις είναι πιο αποτελεσματικές. Στο iPhone η ένταση των ηχογραφήσεων ρυθμίζεται μόνο από τα κουμπιά της συσκευής.</p>`; }
 /* ---------- Σφυρίχτρα σκύλου ----------
    Ήχος από το ηχείο της συσκευής (Web Audio). Τα ηχεία κινητών/laptop φτάνουν συνήθως έως ~18–20 kHz,
    οπότε δεν είναι «αληθινή» υπερηχητική σφυρίχτρα (23–54 kHz) — στα 16–20 kHz όμως ελάχιστοι ενήλικες την ακούν,
@@ -1329,13 +1380,13 @@ function profile(){ const P=S.p; return `<h1>🐾 Προφίλ σκύλου</h1>
     <div class="card"><h3>📊 Σύνοψη</h3><table><tr><td>Ηλικία</td><td><b>${ageTxt()}</b>${isSenior()?' <span class="pill p-gold">ηλικιωμένος</span>':''}</td></tr><tr><td>Θερμίδες</td><td><b>${Math.round(calc().mer)||'—'} kcal</b></td></tr><tr><td>Άσκηση</td><td>${exerciseMin().t}</td></tr><tr><td>Εκπαίδευση</td><td>${trainPct()}%</td></tr><tr><td>Προπονήσεις</td><td>${S.log.length}</td></tr></table></div>
     <div class="card"><h3>💾 Αντίγραφο ασφαλείας</h3><div class="row"><button class="btn" onclick="exportJ()">⬇ Εξαγωγή JSON</button><label class="btn ghost" style="cursor:pointer">⬆ Εισαγωγή<input type="file" accept=".json" hidden onchange="importJ(this.files[0])"></label><button class="btn ghost" onclick="window.print()">🖨 Εκτύπωση σελίδας</button></div></div>
     ${isStandalone()?'':`<div class="card"><h3>📲 Εγκατάσταση</h3><p class="small muted">Βάλε την εφαρμογή στην αρχική οθόνη του κινητού ή στον υπολογιστή, για να ανοίγει σαν κανονική εφαρμογή και να δουλεύει offline.</p><button class="btn" onclick="doInstall()">📲 Εγκατάσταση</button></div>`}
-    <div class="card"><h3>🔒 Ιδιωτικότητα</h3><p class="small muted">Η εφαρμογή δεν στέλνει δεδομένα πουθενά. Εξαιρέσεις, μόνο όταν το ζητήσεις: φωτογραφίες από τη Wikimedia Commons και βίντεο από το YouTube (youtube-nocookie).</p>
+    <div class="card"><h3>🔒 Ιδιωτικότητα</h3><p class="small muted">Η εφαρμογή δεν στέλνει δεδομένα πουθενά. Εξαιρέσεις, μόνο όταν το ζητήσεις: φωτογραφίες και ηχογραφήσεις από τη Wikimedia Commons και βίντεο από το YouTube (youtube-nocookie).</p>
      <label class="chk" style="padding:4px 0"><input type="checkbox" ${phAlways?'checked':''} onchange="setAlways(this.checked)"><span>Αυτόματη φόρτωση φωτογραφιών φυλών & αξεσουάρ (μόνο σε αυτή τη συσκευή· τα βίντεο φορτώνουν πάντα μόνο με κλικ)</span></label></div>
     <div class="card"><h3>🗑 Διαγραφή όλων</h3><p class="small muted">Διαγράφει προφίλ, πρόοδο, ημερολόγια από αυτή τη συσκευή.</p><button class="btn ghost" id="rst" onclick="resetAll(this)">Διαγραφή δεδομένων</button></div>
    </div></div>`; }
 function exportJ(){ const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`skylos360-${(S.p.name||'dog').replace(/\s+/g,'_')}-${today()}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 function importJ(f){ if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.p) throw 0; S=Object.assign(structuredClone(DEF),d); S.p=Object.assign(structuredClone(DEF.p),d.p); save(); toast('Εισήχθη ✓'); render(); }catch(e){ toast('Μη έγκυρο αρχείο'); } }; r.readAsText(f); }
-function resetAll(b){ if(b.dataset.c){ S=structuredClone(DEF); save(); phAlways=false; try{ localStorage.removeItem('skylos360_photos'); }catch(e){} toast('Διαγράφηκαν'); go('home'); } else { b.dataset.c=1; b.textContent='Σίγουρα; Πάτα ξανά'; b.className='btn'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.c; b.textContent='Διαγραφή δεδομένων'; b.className='btn ghost'; } },4000); } }
+function resetAll(b){ if(b.dataset.c){ S=structuredClone(DEF); save(); phAlways=false; try{ localStorage.removeItem('skylos360_photos'); }catch(e){} stopSnd(true); recState='idle'; toast('Διαγράφηκαν'); go('home'); } else { b.dataset.c=1; b.textContent='Σίγουρα; Πάτα ξανά'; b.className='btn'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.c; b.textContent='Διαγραφή δεδομένων'; b.className='btn ghost'; } },4000); } }
 
 /* ---------- Εγκατάσταση (PWA) ---------- */
 let installEvt = null;
