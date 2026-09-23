@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e0f13">
 <title>ΣΚΥΛΟΣ 360° — Εκπαίδευση, Διατροφή & Φροντίδα</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<meta name="description" content="Εκπαίδευση, διατροφή, περιποίηση, υγεία και αξεσουάρ για τον σκύλο σου. Δουλεύει offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ΣΚΥΛΟΣ 360°">
 <style>
 :root{
   --bg:#0e0f13; --bg2:#14161d; --card:#1a1d26; --card2:#222634; --line:#2c3142;
@@ -21,6 +28,7 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#15060
 .top{display:flex;align-items:center;gap:12px;padding:10px 16px;max-width:1280px;margin:0 auto}
 .logo{font-weight:900;font-size:20px;letter-spacing:.5px;white-space:nowrap}
 .logo b{color:var(--red)}
+#installBtn:not(.hide)+.dogchip{margin-left:0}
 .dogchip{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:99px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55vw}
 nav{display:flex;gap:4px;overflow-x:auto;padding:0 12px 8px;max-width:1280px;margin:0 auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
@@ -120,7 +128,8 @@ ol.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:26p
 .hide{display:none!important}
 footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
 @media(max-width:600px){
-  h1{font-size:21px} .logo{font-size:17px} .big-btn{width:140px;height:140px}
+  h1{font-size:21px} .logo{font-size:17px}
+  .top{gap:8px} #installBtn{padding:5px 9px;font-size:12px} #installBtn:not(.hide)+.dogchip{max-width:38vw} .big-btn{width:140px;height:140px}
   .bcs{grid-template-columns:repeat(5,1fr)}
   th,td{padding:6px 5px}
 }
@@ -131,6 +140,7 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
 <header>
   <div class="top">
     <div class="logo">🐕 ΣΚΥΛΟΣ <b>360°</b></div>
+    <button class="btn sm hide" id="installBtn" onclick="doInstall()" style="margin-left:auto">📲 Εγκατάσταση</button>
     <div class="dogchip" id="dogchip" onclick="go('profile')">🐾 <span id="dogchipTxt">Φτιάξε προφίλ σκύλου</span></div>
   </div>
   <nav id="nav"></nav>
@@ -1144,6 +1154,7 @@ function profile(){ const P=S.p; return `<h1>🐾 Προφίλ σκύλου</h1>
    <div class="grid" style="align-content:start">
     <div class="card"><h3>📊 Σύνοψη</h3><table><tr><td>Ηλικία</td><td><b>${ageTxt()}</b>${isSenior()?' <span class="pill p-gold">ηλικιωμένος</span>':''}</td></tr><tr><td>Θερμίδες</td><td><b>${Math.round(calc().mer)||'—'} kcal</b></td></tr><tr><td>Άσκηση</td><td>${exerciseMin().t}</td></tr><tr><td>Εκπαίδευση</td><td>${trainPct()}%</td></tr><tr><td>Προπονήσεις</td><td>${S.log.length}</td></tr></table></div>
     <div class="card"><h3>💾 Αντίγραφο ασφαλείας</h3><div class="row"><button class="btn" onclick="exportJ()">⬇ Εξαγωγή JSON</button><label class="btn ghost" style="cursor:pointer">⬆ Εισαγωγή<input type="file" accept=".json" hidden onchange="importJ(this.files[0])"></label><button class="btn ghost" onclick="window.print()">🖨 Εκτύπωση σελίδας</button></div></div>
+    ${isStandalone()?'':`<div class="card"><h3>📲 Εγκατάσταση</h3><p class="small muted">Βάλε την εφαρμογή στην αρχική οθόνη του κινητού ή στον υπολογιστή, για να ανοίγει σαν κανονική εφαρμογή και να δουλεύει offline.</p><button class="btn" onclick="doInstall()">📲 Εγκατάσταση</button></div>`}
     <div class="card"><h3>🔒 Ιδιωτικότητα</h3><p class="small muted">Η εφαρμογή δεν στέλνει δεδομένα πουθενά. Εξαιρέσεις, μόνο όταν το ζητήσεις: φωτογραφίες από τη Wikimedia Commons και βίντεο από το YouTube (youtube-nocookie).</p>
      <label class="chk" style="padding:4px 0"><input type="checkbox" ${phAlways?'checked':''} onchange="setAlways(this.checked)"><span>Αυτόματη φόρτωση φωτογραφιών φυλών & αξεσουάρ (μόνο σε αυτή τη συσκευή· τα βίντεο φορτώνουν πάντα μόνο με κλικ)</span></label></div>
     <div class="card"><h3>🗑 Διαγραφή όλων</h3><p class="small muted">Διαγράφει προφίλ, πρόοδο, ημερολόγια από αυτή τη συσκευή.</p><button class="btn ghost" id="rst" onclick="resetAll(this)">Διαγραφή δεδομένων</button></div>
@@ -1152,6 +1163,29 @@ function exportJ(){ const b=new Blob([JSON.stringify(S,null,1)],{type:'applicati
 function importJ(f){ if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.p) throw 0; S=Object.assign(structuredClone(DEF),d); S.p=Object.assign(structuredClone(DEF.p),d.p); save(); toast('Εισήχθη ✓'); render(); }catch(e){ toast('Μη έγκυρο αρχείο'); } }; r.readAsText(f); }
 function resetAll(b){ if(b.dataset.c){ S=structuredClone(DEF); save(); phAlways=false; try{ localStorage.removeItem('skylos360_photos'); }catch(e){} toast('Διαγράφηκαν'); go('home'); } else { b.dataset.c=1; b.textContent='Σίγουρα; Πάτα ξανά'; b.className='btn'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.c; b.textContent='Διαγραφή δεδομένων'; b.className='btn ghost'; } },4000); } }
 
+/* ---------- Εγκατάσταση (PWA) ---------- */
+let installEvt = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function showInstall(){ const b = $('#installBtn'); if(b) b.classList.toggle('hide', isStandalone()); }
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; showInstall(); });
+window.addEventListener('appinstalled', () => { installEvt = null; showInstall(); toast('Εγκαταστάθηκε ✓'); });
+async function doInstall(){
+  if(installEvt){ installEvt.prompt(); const r = await installEvt.userChoice; if(r.outcome === 'accepted') toast('Εγκατάσταση…'); installEvt = null; return; }
+  const ios = isIOS(), ua = navigator.userAgent;
+  const where = ios ? 'ios' : /android/i.test(ua) ? 'android' : /firefox/i.test(ua) ? 'firefox' : 'desktop';
+  const T = {
+    ios: ['iPhone / iPad (Safari)', ['Άνοιξε τη σελίδα στο <b>Safari</b> (όχι μέσα από Facebook/Instagram/Gmail).', 'Πάτα το κουμπί <b>Κοινοποίηση</b> <span style="font-size:18px">⬆️</span> (κάτω στο κέντρο ή πάνω δεξιά).', 'Επίλεξε <b>«Προσθήκη στην οθόνη Αφετηρίας»</b>.', 'Πάτα <b>«Προσθήκη»</b> — το εικονίδιο 🐾 εμφανίζεται στην αρχική οθόνη.']],
+    android: ['Android (Chrome / Samsung Internet)', ['Άνοιξε τη σελίδα στο <b>Chrome</b> ή στο <b>Samsung Internet</b> (όχι μέσα από άλλη εφαρμογή).', 'Πάτα το μενού <b>⋮</b> πάνω δεξιά (Samsung: <b>☰</b> κάτω).', 'Επίλεξε <b>«Εγκατάσταση εφαρμογής»</b> ή <b>«Προσθήκη στην αρχική οθόνη»</b>.', 'Επιβεβαίωσε με <b>«Εγκατάσταση»</b>.']],
+    firefox: ['Firefox (υπολογιστής)', ['Ο Firefox για υπολογιστή δεν υποστηρίζει εγκατάσταση εφαρμογών ιστού.', 'Άνοιξε την ίδια διεύθυνση σε <b>Chrome</b> ή <b>Edge</b> και πάτα ξανά «📲 Εγκατάσταση».']],
+    desktop: ['Υπολογιστής (Chrome / Edge)', ['Στη γραμμή διευθύνσεων, δεξιά, πάτα το εικονίδιο <b>εγκατάστασης</b> (οθόνη με βελάκι ⊕).', 'Ή: μενού <b>⋮</b> / <b>…</b> → <b>«Εγκατάσταση ΣΚΥΛΟΣ 360°»</b> (Edge: «Εφαρμογές → Εγκατάσταση αυτής της τοποθεσίας ως εφαρμογής»).', 'Η εφαρμογή ανοίγει σε δικό της παράθυρο και μπαίνει στο μενού Έναρξη / επιφάνεια εργασίας.']]
+  }[where];
+  openModal(`<h2 style="margin-top:0">📲 Εγκατάσταση — ${T[0]}</h2><ol class="steps">${T[1].map(x=>`<li>${x}</li>`).join('')}</ol>
+   <div class="info small">Μετά την εγκατάσταση η εφαρμογή ανοίγει σαν κανονική εφαρμογή και δουλεύει και χωρίς ίντερνετ. Τα δεδομένα σου μένουν στη συσκευή.</div>
+   ${location.protocol==='file:'?'<div class="warn small">Άνοιξες το αρχείο τοπικά. Η εγκατάσταση γίνεται μόνο από τη διεύθυνση <a href="https://xomagr-eng.github.io/skylos-360/">xomagr-eng.github.io/skylos-360</a>.</div>':''}`);
+}
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+showInstall();
 window.addEventListener('hashchange',()=>{ const r=location.hash.slice(1); if(r!==route && ROUTES.find(x=>x[0]===r)){ route=r; render(); } });
 render();
 
