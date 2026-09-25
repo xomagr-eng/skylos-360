@@ -1,6 +1,6 @@
 /* ΣΚΥΛΟΣ 360° — service worker (offline λειτουργία)
    ΑΛΛΑΞΕ το VERSION σε κάθε αλλαγή αρχείων, ώστε οι χρήστες να πάρουν τη νέα έκδοση. */
-const VERSION = 'skylos360-v15';
+const VERSION = 'skylos360-v16';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-192.png', './icons/maskable-512.png',
   './icons/apple-touch-icon.png', './icons/favicon-32.png'];
