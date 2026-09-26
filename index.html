@@ -153,6 +153,16 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
   .bcs{grid-template-columns:repeat(5,1fr)}
   th,td{padding:6px 5px}
 }
+.sos{margin-left:auto;background:#8f0f18;border:1px solid var(--red2)} #installBtn:not(.hide)~.sos{margin-left:0} .sos+.dogchip{margin-left:0}
+.avatar{overflow:hidden} .avatar img{width:100%;height:100%;object-fit:cover}
+.badges{display:flex;flex-wrap:wrap;gap:6px} .bdg{font-size:22px;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--bg2);border:1px solid var(--line)} .bdg.off{filter:grayscale(1);opacity:.28}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px} .bcard{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center} .bcard.on{border-color:var(--red)} .bcard.off{opacity:.45} .bcard .e{font-size:30px}
+.party{background:linear-gradient(90deg,var(--redbg),var(--goldbg));border:1px solid var(--red);border-radius:14px;padding:12px 16px;margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.confetti{position:fixed;top:-30px;z-index:99;pointer-events:none;font-size:22px;animation:fall 2.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.6}}
+@media(prefers-reduced-motion:reduce){.confetti{display:none}}
+.wtimer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--red2)}
+@media(max-width:600px){ .grid.kpis{grid-template-columns:1fr 1fr;gap:8px} .kpis .kpi{padding:10px;gap:8px} .kpis .stat{font-size:22px} .kpis .ic{font-size:19px;width:34px;height:34px;flex:0 0 34px} .party>div{min-width:220px} .party h2{font-size:18px} .sos .ibl{display:none} .sos{padding:5px 9px} .dogchip{max-width:40vw} }
 @media print{header,nav,.btn,.subnav{display:none!important} body{background:#fff;color:#000} .card{border-color:#ccc;background:#fff}}
 </style>
 </head>
@@ -161,7 +171,8 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:20px}
   <div class="top">
     <div class="logo">🐕 ΣΚΥΛΟΣ <b>360°</b></div>
     <button class="btn sm hide" id="installBtn" onclick="doInstall()" style="margin-left:auto" title="Εγκατάσταση εφαρμογής">📲<span class="ibl"> Εγκατάσταση</span></button>
-    <div class="dogchip" id="dogchip" onclick="go('profile')">🐾 <span id="dogchipTxt">Φτιάξε προφίλ σκύλου</span></div>
+    <button class="btn sm sos" onclick="sosModal()" title="Έκτακτη ανάγκη">🚨<span class="ibl"> SOS</span></button>
+    <div class="dogchip" id="dogchip" onclick="S.p.name?dogsModal():go('profile')" title="Οι σκύλοι μου"><span id="dogchipPic">🐾</span> <span id="dogchipTxt">Φτιάξε προφίλ σκύλου</span></div>
   </div>
   <nav id="nav"></nav>
 </header>
@@ -1366,11 +1377,11 @@ const FOOD_GUIDE = [
 <script>
 /* ΣΚΥΛΟΣ 360° — λογική εφαρμογής */
 const KEY = 'skylos360';
-const DEF = {p:{name:'',breed:'',sex:'m',birth:'',weight:'',target:'',neut:false,act:'normal',goal:'keep',coat:'short',ears:'floppy',kcalkg:3700,avatar:'🐕',vet:'',vetTel:''},
-  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,fc:{price:'',kg:'',treat:''},wh:{f:2900,pat:'two',vol:0.6},snd:{vol:0.35,loop:false,gap:5,src:'synth'}};
+const DEF = {p:{name:'',breed:'',sex:'m',birth:'',weight:'',target:'',neut:false,act:'normal',goal:'keep',coat:'short',ears:'floppy',kcalkg:3700,avatar:'🐕',vet:'',vetTel:'',photo:'',gotcha:'',chip:'',owner:'',phone:'',color:'',marks:''},
+  cmd:{},soc:{},groom:{},acc:{},vacc:[],w:[],log:[],day:{d:'',it:{}},bcs:5,fc:{price:'',kg:'',treat:''},rem:[],walks:[],walkStart:0,hist:{},badges:null,party:'',wh:{f:2900,pat:'two',vol:0.6},snd:{vol:0.35,loop:false,gap:5,src:'synth'}};
 let S;
 try{ S = Object.assign(structuredClone(DEF), JSON.parse(localStorage.getItem(KEY)||'{}')); S.p = Object.assign(structuredClone(DEF.p), S.p||{}); }catch(e){ S = structuredClone(DEF); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('⚠️ Γέμισε ο χώρος αποθήκευσης της συσκευής'); } saveDogs(); }
 
 const $ = s => document.querySelector(s);
 const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1430,9 +1441,10 @@ const sub = {train:'cmds',food:'calc',groom:'plan',health:'vacc'};
 let filt = {cmd:'Όλα',gear:'Όλα',tox:'',breed:''};
 function go(r,s){ if(typeof stopSnd==='function') stopSnd(true); route=r; if(s) sub[r]=s; location.hash=r; render(); window.scrollTo(0,0); }
 function renderNav(){ $('#nav').innerHTML = ROUTES.map(([k,t])=>`<button class="${k===route?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
-  $('#dogchipTxt').textContent = S.p.name ? `${S.p.avatar} ${S.p.name} · ${ageTxt()}${S.p.weight?' · '+S.p.weight+' kg':''}` : 'Φτιάξε προφίλ σκύλου'; }
+  $('#dogchipPic').innerHTML = S.p.name ? dogPic(S.p,22) : '🐾';
+  $('#dogchipTxt').textContent = S.p.name ? `${S.p.name} · ${ageTxt()}${S.p.weight?' · '+S.p.weight+' kg':''}${DOGS&&DOGS.list.length>1?' ▾':''}` : 'Φτιάξε προφίλ σκύλου'; }
 function subnav(r, items){ return `<div class="subnav">${items.map(([k,t])=>`<button class="${sub[r]===k?'on':''}" onclick="sub['${r}']='${k}';render()">${t}</button>`).join('')}</div>`; }
-function render(){ renderNav(); const a=$('#app'); a.innerHTML = ({home,train,behav,food,groom,health,gear,breeds,profile})[route](); after(); phAuto(); }
+function render(){ renderNav(); const a=$('#app'); a.innerHTML = ({home,train,behav,food,groom,health,gear,breeds,profile})[route](); after(); phAuto(); checkBadges(); }
 let afterFns=[]; function after(){ afterFns.forEach(f=>f()); afterFns=[]; }
 
 /* ---------- ΣΗΜΕΡΑ ---------- */
@@ -1445,14 +1457,15 @@ function dailyItems(){ const c=calc(), ex=exerciseMin(); const it=[];
 function home(){
   if(S.day.d!==today()){ S.day={d:today(),it:{}}; save(); }
   const c=calc(), items=dailyItems(), done=items.filter(i=>S.day.it[i[0]]).length;
-  const due = GROOM_TASKS.map(t=>[t,groomStat(t)]).filter(([t,s])=>s && s.d<=0 && t.id!=='teeth');
-  const vUp = S.vacc.filter(v=>v.next).map(v=>({...v,d:diffDays(v.next,today())})).filter(v=>v.d<=30).sort((a,b)=>a.d-b.d);
-  const tip = TIPS[Math.floor(Date.now()/864e5)%TIPS.length];
   const pct = Math.round(done/items.length*100);
+  const due = GROOM_TASKS.map(t=>[t,groomStat(t)]).filter(([t,s])=>s && s.d<=0 && t.id!=='teeth');
+  const vUp = [...S.vacc.filter(v=>v.next), ...S.rem.map(r=>({name:'🔁 '+r.n,next:remNext(r)}))].map(v=>({...v,d:diffDays(v.next,today())})).filter(v=>v.d<=30).sort((a,b)=>a.d-b.d);
+  if(S.hist[today()]!==pct){ S.hist[today()]=pct; save(); }
+  const tip = TIPS[Math.floor(Date.now()/864e5)%TIPS.length];
   return `
   ${!S.p.name?`<div class="warn">👋 Καλώς ήρθες! Συμπλήρωσε πρώτα το <a href="#" onclick="go('profile');return false">προφίλ του σκύλου σου</a> (όνομα, ράτσα, ημ. γέννησης, βάρος) — έτσι όλοι οι υπολογισμοί (θερμίδες, γραμμάρια, πρόγραμμα περιποίησης, άσκηση) γίνονται αυτόματα.</div>`:''}
   <div class="hero">
-    <div class="avatar">${S.p.avatar}</div>
+    <div class="avatar">${S.p.photo?`<img src="${S.p.photo}" alt="">`:S.p.avatar}</div>
     <div style="flex:1;min-width:200px">
       <h1>${S.p.name?`Καλημέρα, ${h(S.p.name)}!`:'Ο σκύλος σου'}</h1>
       <div class="muted">${h(S.p.breed||'Ράτσα ;')} · ${ageTxt()} · ${S.p.weight||'?'} kg · ${COATS[S.p.coat]} τρίχωμα</div>
@@ -1460,13 +1473,16 @@ function home(){
       <div class="small muted">Σημερινή ρουτίνα: ${done}/${items.length} (${pct}%)</div>
     </div>
   </div>
-  <div class="grid g4" style="margin-top:12px">
+  ${occasionsBanner()}
+  <div class="grid g4 kpis" style="margin-top:12px">
     ${kpi('🔥',c.mer?Math.round(c.mer):'—','kcal/ημέρα',"go('food','calc')")}
     ${kpi('🥣',c.grams?Math.round(c.gramsFood):'—',`g τροφής/ημέρα · ${c.meals} γεύματα`,"go('food','calc')")}
     ${kpi('🎓',trainPct()+'%','πρόοδος εκπαίδευσης',"go('train','cmds')")}
     ${kpi('🌍',socPct()+'%','κοινωνικοποίηση',"go('train','soc')")}
     ${kpi('🛁',due.length,'εργασίες περιποίησης εκκρεμούν',"go('groom','plan')")}
-    ${kpi('💉',vUp.length,'εμβόλια σε ≤30 ημέρες',"go('health','vacc')")}
+    ${kpi('💉',vUp.length,'εμβόλια/θεραπείες σε ≤30 ημ.',"go('health','rem')")}
+    ${kpi('⭐',streak(),'ημέρες σερί ρουτίνας (≥50%)',"badgesModal()")}
+    ${kpi('🦮',S.walks.filter(w=>diffDays(today(),w.d)<7).reduce((a,w)=>a+w.min,0),'λεπτά βόλτας (7 ημέρες)',"document.getElementById('walkc').scrollIntoView({behavior:'smooth'})")}
   </div>
   <div class="grid g2" style="margin-top:12px">
     <div class="card"><div class="row"><h3>✅ Ρουτίνα ημέρας</h3><span class="right small muted">${fmtD(today())}</span></div>
@@ -1474,6 +1490,8 @@ function home(){
       <div class="small muted" style="margin-top:6px">Άσκηση: ${exerciseMin().t}</div>
     </div>
     <div class="grid" style="align-content:start">
+      ${walkCard()}
+      ${badgeCard()}
       <div class="card"><h3>💡 Συμβουλή της ημέρας</h3><div>${tip}</div></div>
       ${monthCard()}
       <div class="card"><h3>🛁 Περιποίηση που εκκρεμεί</h3>
@@ -1565,7 +1583,7 @@ function cmdModal(id){ const c=COMMANDS.find(x=>x.id===id); const l=S.cmd[id]||0
   ${YT[id]?`<h3 style="margin-top:18px">🎬 Βίντεο (${YT[id].length})</h3><p class="small muted" style="margin:0 0 8px">Στα αγγλικά — αν υπάρχουν, άνοιξε ελληνικούς υπότιτλους από το ⚙️ του player. Επιλεγμένα από εκπαιδευτές που δουλεύουν με θετική ενίσχυση.</p>
    ${YT[id].map(([v,ch,t])=>`<div class="card" style="margin-bottom:8px;padding:10px"><div class="small"><b>${h(t)}</b> · <span class="muted">${h(ch)}</span></div>${ytBox(v)}<div class="small"><a href="https://www.youtube.com/watch?v=${v}" target="_blank" rel="noopener noreferrer">Άνοιγμα στο YouTube ↗</a></div></div>`).join('')}`:''}
   <div class="small" style="margin-top:6px"><a href="https://www.youtube.com/results?search_query=${encodeURIComponent('dog training '+(CMD_EN[id]||c.n)+' positive reinforcement')}" target="_blank" rel="noopener noreferrer">🔎 Περισσότερα βίντεο στο YouTube ↗</a></div>`); }
-function setLvl(id,i,btn){ S.cmd[id]=i; save(); btn.parentNode.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===i)); render(); }
+function setLvl(id,i,btn){ if(i===3 && (S.cmd[id]||0)<3){ confetti(); toast('🏆 Το κάνει παντού! Μπράβο!'); } S.cmd[id]=i; save(); btn.parentNode.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===i)); render(); }
 const CMD_EN = {name:'name recognition eye contact',sit:'sit',down:'down',stay:'stay',come:'recall come when called',leave:'leave it',drop:'drop it',touch:'hand target touch',loose:'loose leash walking',heel:'heel',place:'go to place mat',wait:'wait at door impulse control',crate:'crate training',potty:'potty training',quiet:'quiet barking',off:'stop jumping on people',handling:'cooperative care handling',muzzle:'muzzle training',paw:'shake paw',spin:'spin trick',bow:'bow trick',roll:'roll over',bang:'play dead bang',settle:'settle relaxation',standc:"stand cue",erecall:"emergency recall",downdist:"drop on recall emergency down",fetch:"fetch retrieve",hold:"hold object",findit:"nose work find it",backup:"back up trick",middle:"middle position trick",sitpretty:"sit pretty",wave:"wave trick",weave:"weave through legs",jump:"jump over bar",agility:"agility beginner",canicross:"canicross",disc:"catch frisbee disc",bell:"potty bell",alone:"home alone separation training",car:"car anxiety",vet:"vet visit fear free",uturn:"emergency u-turn",hopup:"hop up into car",highfive:"high five trick",stairs:"puppy stairs elevator",chin:"chin rest cooperative care",lat:"look at that reactive dog",speak:"speak and quiet on cue",pawtarget:"paw target",scratch:"nail scratch board",door:"calm at door guests",foodstay:"stay with food distraction",shy:"cover eyes shy trick",around:"go around cone",perch:"perch work pivot",closedoor:"close the door trick",leashfetch:"get your leash trick",toynames:"toy names",tidy:"tidy up toys",light:"light switch trick",balance:"balance treat on nose",offleash:"off leash training",collargrab:"collar grab",harness:"harness training",wipepaws:"wipe paws",tug:"tug rules drop it",brushing:"grooming brushing desensitization",crawl:"army crawl trick",pill:"give dog pill",swim:"teach dog to swim",hideseek:"hide and seek",kids:"dog safety kids",noise:"fireworks desensitization",flirt:"flirt pole",hike:"hiking with dog",hug:"hug trick",hoop:"jump through hoop",bikes:"reactive bikes",cats:"dog calm with cats",rally:"rally obedience",prayers:"say your prayers trick",limp:"limp trick",tracking:"tracking training",treibball:"treibball",gentle:"take treats gently",firstnights:"puppy first night",pushups:"puppy push ups",box:"shaping box game",bite:"bite inhibition",puppyplay:"puppy play with dogs",deaf:"deaf dog hand signals",blind:"blind dog training",senior:"senior dog exercise",window:"window barking",ferry:"dog public transport travel",cafe:"dog settle cafe",yesno:"dog nod yes shake no trick",baby:"prepare dog for baby",sendaway:"send away command",parkour:"dog parkour",hoopers:"hoopers dog sport",fridge:"fetch drink from fridge",mantrailing:"mantrailing",count:"dog counting trick",catch:"catch treat trick",clothes:"dog coat life jacket training",curb:"wait at curb",frontpos:"front position obedience",aroundme:"circle around me trick",booties:"dog boots training",greet:"greet people politely",groomer:"grooming desensitization",carry:"carry basket trick",relax:"relaxation protocol",hotel:"dog hotel travel tips",finish:"finish swing to heel",sidestep:"sidestep trick",passdogs:"walk past dogs calmly",opendoor:"open door trick",sock:"take off socks trick",lure:"lure coursing",odor:"scent work odor",outsight:"out of sight stay",blanket:"cover up blanket trick",skateboard:"dog skateboard",scooter:"dog scootering mushing",chewright:"chew toy training",pottycue:"potty on command",counter:"counter surfing",handoff:"dog calm with dog walker",sofa:"off furniture on cue",digzone:"dog digging sandbox",bathtub:"dog get in bathtub",recalldist:"recall with distractions",doorbound:"door dashing boundary",yard:"yard boundary training",showteeth:"cooperative care teeth ears",homeexam:"home health check dog",slippers:"fetch slippers",fitball:"peanut ball balance dog",piano:"dog play piano",findkeys:"find keys phone",soundalert:"sound alert training"};
 const YTON = new Set(); /* βίντεο που ο χρήστης επέλεξε να φορτώσει σε αυτή τη συνεδρία */
 function ytInner(v){ if(!YTON.has(v)) return `<div class="ytph"><button class="btn" onclick="playYT('${v}')">▶ Φόρτωση βίντεο</button>
@@ -1803,9 +1821,9 @@ function whistleCard(){ return `<div class="card"><div class="row" style="align-
   </details></div>`; }
 function beep(n=3){ const a=ac(); for(let i=0;i<n;i++){ const t=a.currentTime+i*.3, o=a.createOscillator(), g=a.createGain(); o.frequency.value=880; g.gain.setValueAtTime(.3,t); g.gain.exponentialRampToValueAtTime(.001,t+.25); o.connect(g).connect(a.destination); o.start(t); o.stop(t+.26);} }
 const fmtT = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-function setT(m){ clearInterval(tools.iv); tools.run=false; tools.len=m*60; tools.left=tools.len; const e=$('#tmr'); if(e) e.textContent=fmtT(tools.left); const b=$('#tbtn'); if(b) b.textContent='▶ Έναρξη'; }
-function startT(){ ac(); if(tools.run){ clearInterval(tools.iv); tools.run=false; } else { tools.run=true; tools.iv=setInterval(()=>{ tools.left--; const e=$('#tmr'); if(e) e.textContent=fmtT(tools.left);
-  if(tools.left<=0){ clearInterval(tools.iv); tools.run=false; beep(); toast('⏱️ Τέλος προπόνησης — μπράβο!'); tools.left=tools.len; if(e) e.textContent=fmtT(tools.left); const b=$('#tbtn'); if(b) b.textContent='▶ Έναρξη'; } },1000); }
+function setT(m){ clearInterval(tools.iv); tools.run=false; tools.len=m*60; tools.left=tools.len; const e=$('#tmr'); if(e) e.textContent=walkFmt(tools.left); const b=$('#tbtn'); if(b) b.textContent='▶ Έναρξη'; }
+function startT(){ ac(); if(tools.run){ clearInterval(tools.iv); tools.run=false; } else { tools.run=true; tools.iv=setInterval(()=>{ tools.left--; const e=$('#tmr'); if(e) e.textContent=walkFmt(tools.left);
+  if(tools.left<=0){ clearInterval(tools.iv); tools.run=false; beep(); toast('⏱️ Τέλος προπόνησης — μπράβο!'); tools.left=tools.len; if(e) e.textContent=walkFmt(tools.left); const b=$('#tbtn'); if(b) b.textContent='▶ Έναρξη'; } },1000); }
   const b=$('#tbtn'); if(b) b.textContent=tools.run?'⏸ Παύση':'▶ Έναρξη'; }
 function renderScore(){ const e=$('#score'); if(!e) return; const n=tools.ok+tools.no, p=n?Math.round(tools.ok/n*100):0;
   e.innerHTML=`<div class="stat">${tools.ok}/${n} <small>(${p}%)</small></div><div class="bar"><i style="width:${p}%"></i></div><div class="small" style="margin-top:6px">${n<10?`Ακόμη ${10-n} επαναλήψεις…`: p>=80?'<span class="status-ok">➜ Έτοιμος για πιο δύσκολο (διάρκεια, απόσταση ή περισπασμούς)</span>': p<=50?'<span class="status-late">➜ Κάνε το πιο εύκολο</span>':'<span class="status-due">➜ Μείνε στο ίδιο επίπεδο</span>'}</div>`; }
@@ -1988,6 +2006,7 @@ function health(){ let body='';
     <div class="warn small">Βραχυκέφαλες φυλές (μπουλντόγκ, πατ, σιτζού), υπέρβαροι, ηλικιωμένοι και σκύλοι με πυκνό τρίχωμα κινδυνεύουν περισσότερο. Ποτέ σε σταθμευμένο αυτοκίνητο.</div></div>`; }
   else if(sub.health==='kit'){ body=`<p class="sub">Φαρμακείο πρώτων βοηθειών για σπίτι & αυτοκίνητο.</p><div class="card">${FIRST_AID.map((x,i)=>`<label class="chk ${S.acc['fa'+i]?'done':''}"><input type="checkbox" ${S.acc['fa'+i]?'checked':''} onchange="S.acc['fa${i}']=this.checked;save();render()"><span>${x}</span></label>`).join('')}</div>
     <div class="warn">ΠΟΤΕ ανθρώπινα παυσίπονα (ιβουπροφαίνη, παρακεταμόλη, ασπιρίνη, δικλοφενάκη) — είναι τοξικά για σκύλους.</div>`; }
+  else if(sub.health==='rem'){ body=remView(); }
   else if(sub.health==='symptoms'){ body=symptomsView(); }
   else if(sub.health==='diseases'){ body=diseasesView(); }
   else if(sub.health==='months'){ body=monthsView(); }
@@ -1997,7 +2016,7 @@ function health(){ let body='';
     ${S.p.vetTel?`<a class="btn" href="tel:${h(S.p.vetTel)}" style="text-decoration:none;display:inline-block">📞 Κλήση</a>`:''}</div>
     <div class="card"><h3>📅 Ετήσιος έλεγχος</h3><ul class="clean small"><li>Κλινική εξέταση 1×/έτος (ηλικιωμένοι 2×/έτος)</li><li>Αιματολογικός/βιοχημικός έλεγχος (ιδίως 7+)</li><li>Τεστ λεϊσμάνιας, διροφιλαρίας, ερλίχιας</li><li>Έλεγχος δοντιών — καθαρισμός αν χρειάζεται</li><li>Ζύγιση & BCS</li></ul></div></div>`; }
   return `<h1>🩺 Υγεία</h1><p class="sub">Εμβόλια, έκτακτα σημάδια, πρώτες βοήθειες, νομοθεσία και κτηνίατρος.</p>
-  ${subnav('health',[['vacc','💉 Εμβόλια'],['emerg','🚨 Έκτακτα & θερμοπληξία'],['kit','🧰 Φαρμακείο'],['vet','👩‍⚕️ Κτηνίατρος'],['symptoms','🔎 Τι έχει; (συμπτώματα)'],['diseases','🦠 Συχνές ασθένειες'],['months','📅 Κίνδυνοι ανά μήνα'],['age','🎂 Ηλικία σε ανθρώπινα'],['law','⚖️ Νόμος & υποχρεώσεις']])}${body}`; }
+  ${subnav('health',[['vacc','💉 Εμβόλια'],['emerg','🚨 Έκτακτα & θερμοπληξία'],['kit','🧰 Φαρμακείο'],['vet','👩‍⚕️ Κτηνίατρος'],['rem','🔁 Αντιπαρασιτικά & υπενθυμίσεις'],['symptoms','🔎 Τι έχει; (συμπτώματα)'],['diseases','🦠 Συχνές ασθένειες'],['months','📅 Κίνδυνοι ανά μήνα'],['age','🎂 Ηλικία σε ανθρώπινα'],['law','⚖️ Νόμος & υποχρεώσεις']])}${body}`; }
 
 /* ---------- Υγεία: οδηγός συμπτωμάτων (γενική ενημέρωση, ΟΧΙ διάγνωση) ---------- */
 const URG = {3:['🔴 Επείγον — κτηνίατρος ΤΩΡΑ','p-red'],2:['🟠 Κτηνίατρος σήμερα–αύριο','p-gold'],1:['🔵 Παρακολούθηση στο σπίτι','p-cyan']};
@@ -2760,7 +2779,10 @@ function setBreed(n){ const b=BREEDS.find(x=>x[0]===n); S.p.breed=n; S.p.coat=b[
 /* ---------- ΠΡΟΦΙΛ ---------- */
 function profile(){ const P=S.p; return `<h1>🐾 Προφίλ σκύλου</h1><p class="sub">Όλα αποθηκεύονται μόνο σε αυτή τη συσκευή. Κάνε τακτικά εξαγωγή αντιγράφου ασφαλείας.</p>
   <div class="grid g2"><div class="card">
-   <div class="row" style="margin-bottom:10px">${['🐕','🐶','🦮','🐕‍🦺','🐩','🐾'].map(a=>`<button class="btn ${P.avatar===a?'':'ghost'}" style="font-size:22px;padding:4px 10px" onclick="setP('avatar','${a}');render()">${a}</button>`).join('')}</div>
+   <div class="row" style="margin-bottom:10px">${['🐕','🐶','🦮','🐕‍🦺','🐩','🐾'].map(a=>`<button class="btn ${P.avatar===a?'':'ghost'}" style="font-size:22px;padding:4px 10px" onclick="setP('avatar','${a}');render()">${a}</button>`).join('')}
+   <label class="btn ghost sm" style="cursor:pointer">📷 ${P.photo?'Αλλαγή':'Φωτογραφία'}<input type="file" accept="image/*" hidden onchange="setPhoto(this.files[0])"></label>
+   ${P.photo?`<img src="${P.photo}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--red)"><button class="btn ghost sm" onclick="setP('photo','');render()">✕</button>`:''}</div>
+   <div class="small muted" style="margin:-4px 0 8px">Η φωτογραφία μένει μόνο στη συσκευή σου (μικραίνει αυτόματα).</div>
    <div class="grid g2" style="gap:0 10px">
    <label class="f">Όνομα<input value="${h(P.name)}" onchange="setP('name',this.value);renderNav()"></label>
    <label class="f">Φυλή<select onchange="setBreed(this.value)"><option value="">—</option>${BREEDS.map(b=>`<option ${P.breed===b[0]?'selected':''}>${b[0]}</option>`).join('')}</select></label>
@@ -2774,16 +2796,206 @@ function profile(){ const P=S.p; return `<h1>🐾 Προφίλ σκύλου</h1>
    <label class="f">Αυτιά<select onchange="setP('ears',this.value)"><option value="floppy">Κρεμαστά</option><option value="erect" ${P.ears==='erect'?'selected':''}>Όρθια</option></select></label>
    </div><button class="btn" onclick="toast('Αποθηκεύτηκε ✓');go('home')">✓ Αποθήκευση & Σήμερα</button></div>
    <div class="grid" style="align-content:start">
+    <div class="card"><div class="row"><h3>🐾 Οι σκύλοι μου (${DOGS.list.length})</h3><button class="btn sm right" onclick="dogsModal()">Διαχείριση / ＋ σκύλος</button></div><div class="small muted">Κάθε σκύλος έχει δικό του προφίλ, πρόοδο, βιβλιάριο και ημερολόγια.</div></div>
+    <div class="card"><h3>🆔 Ταυτότητα & ασφάλεια</h3><div class="grid g2" style="gap:0 10px">
+     <label class="f">Αρ. microchip<input value="${h(P.chip)}" inputmode="numeric" onchange="setP('chip',this.value.trim())"></label>
+     <label class="f">Ημ. υιοθεσίας (ήρθε σπίτι)<input type="date" value="${P.gotcha}" onchange="setP('gotcha',this.value);render()"></label>
+     <label class="f">Όνομα κηδεμόνα<input value="${h(P.owner)}" onchange="setP('owner',this.value)"></label>
+     <label class="f">Τηλέφωνο κηδεμόνα<input type="tel" value="${h(P.phone)}" onchange="setP('phone',this.value)"></label>
+     <label class="f">Χρώμα<input value="${h(P.color)}" placeholder="π.χ. μαύρο με λευκό στήθος" onchange="setP('color',this.value)"></label>
+     <label class="f">Ιδιαίτερα σημάδια<input value="${h(P.marks)}" placeholder="π.χ. κομμένο αυτί, ροζ μύτη" onchange="setP('marks',this.value)"></label></div>
+     <div class="row"><button class="btn" onclick="lostModal()">🚨 Χάθηκε — αφίσα & οδηγίες</button><button class="btn ghost" onclick="printId()">🖨 Κάρτα ταυτότητας</button></div></div>
     <div class="card"><h3>📊 Σύνοψη</h3><table><tr><td>Ηλικία</td><td><b>${ageTxt()}</b>${isSenior()?' <span class="pill p-gold">ηλικιωμένος</span>':''}</td></tr><tr><td>Θερμίδες</td><td><b>${Math.round(calc().mer)||'—'} kcal</b></td></tr><tr><td>Άσκηση</td><td>${exerciseMin().t}</td></tr><tr><td>Εκπαίδευση</td><td>${trainPct()}%</td></tr><tr><td>Προπονήσεις</td><td>${S.log.length}</td></tr></table></div>
     <div class="card"><h3>💾 Αντίγραφο ασφαλείας</h3><div class="row"><button class="btn" onclick="exportJ()">⬇ Εξαγωγή JSON</button><label class="btn ghost" style="cursor:pointer">⬆ Εισαγωγή<input type="file" accept=".json" hidden onchange="importJ(this.files[0])"></label><button class="btn ghost" onclick="window.print()">🖨 Εκτύπωση σελίδας</button></div></div>
     ${isStandalone()?'':`<div class="card"><h3>📲 Εγκατάσταση</h3><p class="small muted">Βάλε την εφαρμογή στην αρχική οθόνη του κινητού ή στον υπολογιστή, για να ανοίγει σαν κανονική εφαρμογή και να δουλεύει offline.</p><button class="btn" onclick="doInstall()">📲 Εγκατάσταση</button></div>`}
     <div class="card"><h3>🔒 Ιδιωτικότητα</h3><p class="small muted">Η εφαρμογή δεν στέλνει δεδομένα πουθενά. Εξαιρέσεις, μόνο όταν το ζητήσεις: φωτογραφίες και ηχογραφήσεις από τη Wikimedia Commons και βίντεο από το YouTube (youtube-nocookie).</p>
      <label class="chk" style="padding:4px 0"><input type="checkbox" ${phAlways?'checked':''} onchange="setAlways(this.checked)"><span>Αυτόματη φόρτωση φωτογραφιών φυλών & αξεσουάρ (μόνο σε αυτή τη συσκευή· τα βίντεο φορτώνουν πάντα μόνο με κλικ)</span></label></div>
-    <div class="card"><h3>🗑 Διαγραφή όλων</h3><p class="small muted">Διαγράφει προφίλ, πρόοδο, ημερολόγια από αυτή τη συσκευή.</p><button class="btn ghost" id="rst" onclick="resetAll(this)">Διαγραφή δεδομένων</button></div>
+    <div class="card"><h3>🗑 Διαγραφή όλων</h3><p class="small muted">Διαγράφει προφίλ, πρόοδο και ημερολόγια του <b>τρέχοντος</b> σκύλου από αυτή τη συσκευή.</p><button class="btn ghost" id="rst" onclick="resetAll(this)">Διαγραφή δεδομένων</button></div>
    </div></div>`; }
 function exportJ(){ const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`skylos360-${(S.p.name||'dog').replace(/\s+/g,'_')}-${today()}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 function importJ(f){ if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.p) throw 0; S=Object.assign(structuredClone(DEF),d); S.p=Object.assign(structuredClone(DEF.p),d.p); save(); toast('Εισήχθη ✓'); render(); }catch(e){ toast('Μη έγκυρο αρχείο'); } }; r.readAsText(f); }
 function resetAll(b){ if(b.dataset.c){ S=structuredClone(DEF); save(); phAlways=false; try{ localStorage.removeItem('skylos360_photos'); }catch(e){} stopSnd(true); recState='idle'; toast('Διαγράφηκαν'); go('home'); } else { b.dataset.c=1; b.textContent='Σίγουρα; Πάτα ξανά'; b.className='btn'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.c; b.textContent='Διαγραφή δεδομένων'; b.className='btn ghost'; } },4000); } }
+
+
+/* ---------- Πολλοί σκύλοι ---------- */
+var DOGS = null;
+function loadDog(x){ const o=Object.assign(structuredClone(DEF), x||{}); o.p=Object.assign(structuredClone(DEF.p), (x&&x.p)||{}); return o; }
+(function(){ let d=null; try{ d=JSON.parse(localStorage.getItem('skylos360_dogs')||'null'); }catch(e){}
+  if(!d || !Array.isArray(d.list) || !d.list.length) d={active:'d1', list:[{id:'d1', s:null}]};
+  if(!d.list.find(x=>x.id===d.active)) d.active=d.list[0].id;
+  DOGS=d; S=loadDog(S); saveDogs(); })();
+function saveDogs(){ if(!DOGS) return; const a=DOGS.list.find(x=>x.id===DOGS.active); if(a) a.s=S; try{ localStorage.setItem('skylos360_dogs', JSON.stringify(DOGS)); }catch(e){} }
+function dogPic(p,sz){ return p.photo?`<img src="${p.photo}" alt="" style="width:${sz}px;height:${sz}px;border-radius:50%;object-fit:cover;vertical-align:middle">`:`<span style="font-size:${Math.round(sz*.8)}px;line-height:1">${p.avatar||'🐕'}</span>`; }
+function switchDog(id){ saveDogs(); const d=DOGS.list.find(x=>x.id===id); if(!d) return; DOGS.active=id; S=loadDog(d.s); if(typeof stopSnd==='function') stopSnd(true); save(); closeModal(); toast('🐾 '+(S.p.name||'Νέος σκύλος')); render(); }
+function addDog(){ saveDogs(); const id='d'+Date.now().toString(36); DOGS.list.push({id, s:structuredClone(DEF)}); switchDog(id); go('profile'); toast('Συμπλήρωσε το προφίλ του νέου σκύλου'); }
+function delDog(id,b){ if(DOGS.list.length<2) return; if(!b.dataset.c){ b.dataset.c=1; b.textContent='Σίγουρα;'; return; }
+  DOGS.list=DOGS.list.filter(x=>x.id!==id); if(DOGS.active===id){ DOGS.active=DOGS.list[0].id; S=loadDog(DOGS.list[0].s); } save(); dogsModal(); render(); }
+function dogsModal(){ saveDogs(); openModal(`<h2 style="margin-top:0">🐾 Οι σκύλοι μου</h2><div class="grid" style="gap:8px">${DOGS.list.map(d=>{ const p=(d.id===DOGS.active?S.p:(d.s&&d.s.p))||{}; const on=d.id===DOGS.active;
+   return `<div class="card row" style="${on?'border-color:var(--red)':''}">${dogPic(p,44)}<div><b>${h(p.name||'Χωρίς όνομα')}</b><div class="small muted">${h(p.breed||'')}</div></div>
+   <div class="right row">${on?'<span class="pill p-red">ενεργός</span>':`<button class="btn sm" onclick="switchDog('${d.id}')">Επιλογή</button>`}${DOGS.list.length>1?`<button class="btn sm ghost" onclick="delDog('${d.id}',this)">🗑</button>`:''}</div></div>`; }).join('')}</div>
+   <div class="row" style="margin-top:12px"><button class="btn" onclick="addDog()">＋ Πρόσθεσε σκύλο</button><button class="btn ghost" onclick="closeModal();go('profile')">✎ Προφίλ ενεργού</button></div>
+   <div class="small muted" style="margin-top:8px">Κάθε σκύλος έχει δικό του προφίλ, πρόοδο εκπαίδευσης, βιβλιάριο, βάρος, βόλτες και βραβεία.</div>`); }
+function setPhoto(f){ if(!f) return; const u=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{ const n=320, c=document.createElement('canvas'); c.width=c.height=n; const k=Math.min(img.width,img.height);
+    c.getContext('2d').drawImage(img,(img.width-k)/2,(img.height-k)/2,k,k,0,0,n,n); URL.revokeObjectURL(u);
+    S.p.photo=c.toDataURL('image/jpeg',.8); save(); render(); toast('📸 Αποθηκεύτηκε (μόνο στη συσκευή)'); };
+  img.onerror=()=>{ URL.revokeObjectURL(u); toast('Δεν διαβάστηκε η εικόνα'); }; img.src=u; }
+
+/* ---------- Γιορτές: γενέθλια & επέτειος υιοθεσίας ---------- */
+function occasions(){ const out=[], n=new Date(today()+'T12:00');
+  for(const [k,t,ic] of [['birth','Γενέθλια','🎂'],['gotcha','Επέτειος υιοθεσίας','🏡']]){ const v=S.p[k]; if(!v) continue; const b=new Date(v+'T12:00');
+    let nx=new Date(n.getFullYear(),b.getMonth(),b.getDate(),12); if(nx<n) nx.setFullYear(n.getFullYear()+1);
+    const d=Math.round((nx-n)/864e5), yrs=nx.getFullYear()-b.getFullYear(); if(yrs>0 && d<=30) out.push({k,d,t,ic,yrs}); }
+  return out.sort((a,b)=>a.d-b.d); }
+function occasionsBanner(){ const o=occasions(); if(!o.length) return ''; const nm=h(S.p.name||'ο σκύλος σου');
+  if(o.some(x=>x.d===0) && S.party!==today()){ S.party=today(); save(); setTimeout(confetti,300); }
+  return o.map(x=>x.d===0
+   ? `<div class="party"><span style="font-size:40px">${x.ic}</span><div style="flex:1"><h2 style="margin:0">${x.k==='birth'?`Χρόνια πολλά, ${nm}! Σήμερα κλείνει ${x.yrs} ${x.yrs===1?'χρόνο':'χρόνια'}!`:`${x.yrs} ${x.yrs===1?'χρόνος':'χρόνια'} μαζί σας σήμερα, ${nm}! ❤️`}</h2><div class="small">Γιόρτασέ το με μια ασφαλή λιχουδιά, μια νέα βόλτα ή ένα καινούριο κόλπο.</div></div><button class="btn sm" onclick="go('food','recipes')">🍪 Σπιτικές λιχουδιές</button></div>`
+   : `<div class="party" style="padding:8px 14px"><span style="font-size:24px">${x.ic}</span><div>${x.t} σε <b>${x.d}</b> ${x.d===1?'ημέρα':'ημέρες'} — ${x.k==='birth'?`κλείνει ${x.yrs}`:`${x.yrs} ${x.yrs===1?'χρόνος':'χρόνια'} μαζί`}!</div></div>`).join(''); }
+function confetti(){ if(matchMedia('(prefers-reduced-motion: reduce)').matches) return; const e=['🎉','🐾','🦴','❤️','⭐','🎊'];
+  for(let i=0;i<34;i++){ const d=document.createElement('div'); d.className='confetti'; d.textContent=e[i%e.length]; d.style.left=Math.random()*100+'vw'; d.style.animationDelay=(Math.random()*.8)+'s'; d.style.fontSize=(16+Math.random()*16)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),3600); } }
+
+/* ---------- Βόλτα με χρονόμετρο ---------- */
+function walkToggle(){ if(S.walkStart){ let min=Math.round((Date.now()-S.walkStart)/60000); if(min<1) min=1; if(min>240){ min=240; toast('Περιορίστηκε στις 4 ώρες — μήπως ξέχασες το χρονόμετρο;'); }
+    S.walks.push({d:today(),min}); S.walkStart=0; const k=dailyItems().find(i=>i[0].startsWith('walk')&&!S.day.it[i[0]]); if(k) S.day.it[k[0]]=true;
+    save(); toast(`🦮 Βόλτα ${min}′ καταγράφηκε ✓`); }
+  else { S.walkStart=Date.now(); save(); toast('Καλή βόλτα! ⏱'); } render(); }
+function walkCancel(){ S.walkStart=0; save(); render(); }
+function walkAdd(){ const m=parseInt(prompt('Λεπτά βόλτας (σήμερα):','30')); if(m>0){ S.walks.push({d:today(),min:Math.min(m,600)}); save(); render(); toast('Καταγράφηκε ✓'); } }
+function walkFmt(ms){ const s=Math.floor(ms/1000); return `${Math.floor(s/3600)?Math.floor(s/3600)+':':''}${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+setInterval(()=>{ const e=document.getElementById('wkT'); if(e && S.walkStart) e.textContent=walkFmt(Date.now()-S.walkStart); },1000);
+function walkCard(){ const days=[...Array(7)].map((_,i)=>addDays(today(),i-6)); const v=days.map(d=>S.walks.filter(w=>w.d===d).reduce((a,w)=>a+w.min,0)); const mx=Math.max(30,...v);
+  const tot=v.reduce((a,b)=>a+b,0), n=S.walks.filter(w=>w.d===today()).length;
+  return `<div class="card" id="walkc"><div class="row"><h3>🦮 Βόλτα</h3><span class="right small muted">σήμερα: ${v[6]}′ σε ${n} ${n===1?'βόλτα':'βόλτες'}</span></div>
+   <div class="row">${S.walkStart?`<span class="wtimer" id="wkT">${walkFmt(Date.now()-S.walkStart)}</span><button class="btn" onclick="walkToggle()">⏹ Τέλος βόλτας</button><button class="btn ghost sm" onclick="walkCancel()">Ακύρωση</button>`
+     :`<button class="btn" onclick="walkToggle()">▶ Ξεκίνα βόλτα</button><button class="btn ghost sm" onclick="walkAdd()">＋ Χειροκίνητα</button>`}</div>
+   <div style="display:flex;gap:6px;align-items:flex-end;height:74px;margin-top:10px">${days.map((d,i)=>`<div style="flex:1;text-align:center" title="${fmtD(d)}: ${v[i]}′"><div style="height:${Math.round(v[i]/mx*50)}px;min-height:2px;background:${i===6?'var(--red2)':'var(--red)'};border-radius:5px 5px 0 0"></div><div class="small muted">${['Κυ','Δε','Τρ','Τε','Πε','Πα','Σα'][new Date(d+'T12:00').getDay()]}</div></div>`).join('')}</div>
+   <div class="small muted">7 ημέρες: <b>${tot}′</b> · στόχος: ${exerciseMin().t}</div></div>`; }
+
+/* ---------- Σερί & βραβεία ---------- */
+function streak(){ let d=today(), n=0; if(!((S.hist[d]||0)>=50)) d=addDays(d,-1); while((S.hist[d]||0)>=50){ n++; d=addDays(d,-1); } return n; }
+function maxStreak(){ const k=Object.keys(S.hist).filter(d=>S.hist[d]>=50).sort(); let best=0,run=0,prev=null; for(const d of k){ run=(prev&&diffDays(d,prev)===1)?run+1:1; best=Math.max(best,run); prev=d; } return best; }
+function cmdN(l){ return COMMANDS.filter(c=>(S.cmd[c.id]||0)>=l).length; }
+const BADGES = [
+ ['profile','🐾','Καλώς ήρθες','Συμπλήρωσες όνομα, βάρος & ημ. γέννησης',()=>!!(S.p.name&&S.p.weight&&S.p.birth)],
+ ['photo','📸','Φωτογενής','Πρόσθεσες φωτογραφία',()=>!!S.p.photo],
+ ['id','🆔','Πάντα βρίσκει τον δρόμο','Microchip & τηλέφωνο στο προφίλ',()=>!!(S.p.chip&&S.p.phone)],
+ ['cmd1','🎓','Πρώτο μάθημα','1 εντολή «το κάνει στο σπίτι»',()=>cmdN(2)>=1],
+ ['cmd5','🥉','Καλός μαθητής','5 εντολές',()=>cmdN(2)>=5],
+ ['cmd15','🥈','Άριστος μαθητής','15 εντολές',()=>cmdN(2)>=15],
+ ['cmd40','🥇','Πρωταθλητής','40 εντολές',()=>cmdN(2)>=40],
+ ['cmd80','🏅','Θρύλος','80 εντολές',()=>cmdN(2)>=80],
+ ['mst3','🏆','Παντού!','3 εντολές «παντού & με περισπασμούς»',()=>cmdN(3)>=3],
+ ['mst15','👑','Master','15 εντολές «παντού & με περισπασμούς»',()=>cmdN(3)>=15],
+ ['st3','🔥','Σερί 3 ημερών','Ρουτίνα ≥50% 3 μέρες στη σειρά',()=>maxStreak()>=3],
+ ['st7','⭐','Σερί εβδομάδας','7 μέρες στη σειρά',()=>maxStreak()>=7],
+ ['st30','💎','Σερί μήνα','30 μέρες στη σειρά',()=>maxStreak()>=30],
+ ['soc50','🌍','Κοινωνικός','Κοινωνικοποίηση ≥50%',()=>socPct()>=50],
+ ['soc100','🎉','Πολίτης του κόσμου','Κοινωνικοποίηση 100%',()=>socPct()>=100],
+ ['log10','📓','Συνεπής','10 προπονήσεις στο ημερολόγιο',()=>S.log.length>=10],
+ ['walk10','🦮','Περιπατητής','10 καταγεγραμμένες βόλτες',()=>S.walks.length>=10],
+ ['walk100','🥾','Εξερευνητής','100 βόλτες',()=>S.walks.length>=100],
+ ['walkh','⏱️','Μαραθώνιος','50 ώρες βόλτας συνολικά',()=>S.walks.reduce((a,w)=>a+w.min,0)>=3000],
+ ['vacc','💉','Υπεύθυνος κηδεμόνας','Καταχώρισες εμβόλιο στο βιβλιάριο',()=>S.vacc.length>0],
+ ['shield','🛡️','Θωρακισμένος','Αντιπαρασιτικά χωρίς καθυστέρηση',()=>S.rem.length>0 && S.rem.every(r=>remNext(r)>=today())],
+ ['weigh','⚖️','Ζυγαριά','5 ζυγίσματα',()=>S.w.length>=5],
+];
+function earned(){ return BADGES.filter(b=>{ try{ return b[4](); }catch(e){ return false; } }).map(b=>b[0]); }
+function checkBadges(){ const e=earned(); if(!Array.isArray(S.badges)){ S.badges=e; save(); return; }
+  const nw=e.filter(x=>!S.badges.includes(x)); if(!nw.length) return; S.badges.push(...nw); save();
+  const b=BADGES.find(x=>x[0]===nw[nw.length-1]); confetti(); toast(`🏅 Νέο βραβείο: ${b[1]} ${b[2]}`); }
+function badgeCard(){ const e=S.badges||[], st=streak();
+  return `<div class="card click" onclick="badgesModal()"><div class="row"><h3>🏅 Βραβεία ${e.length}/${BADGES.length}</h3><span class="right small">${st?`⭐ σερί <b>${st}</b> ${st===1?'ημέρα':'ημέρες'}`:'<span class="muted">ολοκλήρωσε ≥50% της ρουτίνας για σερί</span>'}</span></div>
+   <div class="badges">${BADGES.map(b=>`<span class="bdg ${e.includes(b[0])?'':'off'}" title="${b[2]} — ${b[3]}">${b[1]}</span>`).join('')}</div></div>`; }
+function badgesModal(){ const e=S.badges||[]; openModal(`<h2 style="margin-top:0">🏅 Βραβεία ${h(S.p.name||'')}</h2>
+  <div class="row" style="margin-bottom:10px"><span class="pill p-red">⭐ Σερί τώρα: ${streak()}</span><span class="pill p-gold">🔥 Καλύτερο σερί: ${maxStreak()}</span><span class="pill p-cyan">🎓 Εντολές: ${cmdN(2)}/${COMMANDS.length}</span></div>
+  <div class="bgrid">${BADGES.map(b=>`<div class="bcard ${e.includes(b[0])?'on':'off'}"><div class="e">${b[1]}</div><b>${b[2]}</b><div class="small muted">${b[3]}</div></div>`).join('')}</div>`); }
+
+/* ---------- Επαναλαμβανόμενες θεραπείες / υπενθυμίσεις ---------- */
+const REM_PRESETS = [['Αμπούλα ψύλλων/τσιμπουριών',30],['Χάπι ψύλλων/τσιμπουριών (μηνιαίο)',30],['Χάπι ψύλλων/τσιμπουριών (3μηνο)',90],['Αντιπαρασιτικό περιλαίμιο',180],['Απωθητικό σκνίπας (λεϊσμάνια)',180],['Αποπαρασίτωση εντέρου',90],['Πρόληψη διροφιλαρίας',30],['Τεστ λεϊσμάνιας & διροφιλαρίας',365],['Ετήσιο check-up',365],['Καθαρισμός αδένων / groomer',60],['Αλλαγή φίλτρου σιντριβανιού',30]];
+function remNext(r){ return addDays(r.last,+r.every); }
+function remAdd(){ const n=$('#rmN').value.trim(), e=+$('#rmE').value, l=$('#rmL').value||today(); if(!n||!(e>0)) return toast('Συμπλήρωσε όνομα και συχνότητα');
+  S.rem.push({id:Date.now().toString(36),n,every:e,last:l}); save(); toast('Προστέθηκε ✓'); render(); }
+function remDone(id){ const r=S.rem.find(x=>x.id===id); r.last=today(); save(); toast(`✓ ${r.n} — επόμενη ${fmtD(remNext(r))}`); render(); }
+function remDel(id,b){ if(!b.dataset.c){ b.dataset.c=1; b.textContent='Σίγουρα;'; return; } S.rem=S.rem.filter(x=>x.id!==id); save(); render(); }
+function remView(){ const list=S.rem.map(r=>({...r,nx:remNext(r),d:diffDays(remNext(r),today())})).sort((a,b)=>a.d-b.d);
+  return `<p class="sub">Αμπούλες, χάπια, περιλαίμια, αποπαρασίτωση — σημείωσε πότε έγινε και η εφαρμογή σου λέει πότε είναι η επόμενη. Στην Ελλάδα η προστασία από τσιμπούρια και σκνίπες χρειάζεται <b>όλο τον χρόνο</b>.</p>
+  <div class="card"><div class="grid g4" style="gap:0 10px">
+   <label class="f">Θεραπεία<input id="rmN" list="rmL0" placeholder="Διάλεξε ή γράψε" onchange="const p=REM_PRESETS.find(x=>x[0]===this.value); if(p) $('#rmE').value=p[1]"><datalist id="rmL0">${REM_PRESETS.map(p=>`<option>${p[0]}</option>`).join('')}</datalist></label>
+   <label class="f">Κάθε (ημέρες)<input id="rmE" type="number" min="1" value="30"></label>
+   <label class="f">Τελευταία φορά<input id="rmL" type="date" value="${today()}"></label>
+   <label class="f">&nbsp;<button class="btn" onclick="remAdd()">＋ Προσθήκη</button></label></div>
+   <div class="row" style="margin-top:4px">${REM_PRESETS.slice(0,6).map(p=>`<button class="btn ghost sm" onclick="$('#rmN').value='${p[0]}';$('#rmE').value=${p[1]}">${p[0]}</button>`).join('')}</div></div>
+  ${list.length?`<div class="card tbl" style="margin-top:12px"><table><tr><th>Θεραπεία</th><th>Κάθε</th><th>Τελευταία</th><th>Επόμενη</th><th></th></tr>${list.map(r=>`<tr><td><b>${h(r.n)}</b></td><td>${r.every} ημ.</td><td>${fmtD(r.last)}</td>
+    <td class="${r.d<0?'status-late':r.d<=3?'status-due':'status-ok'}">${fmtD(r.nx)}<br><span class="small">${r.d<0?`καθυστέρηση ${-r.d} ημ.`:r.d===0?'σήμερα':'σε '+r.d+' ημ.'}</span></td>
+    <td style="white-space:nowrap"><button class="btn sm" onclick="remDone('${r.id}')">✓ Έγινε σήμερα</button> <button class="btn ghost sm" onclick="remDel('${r.id}',this)">🗑</button></td></tr>`).join('')}</table></div>`:'<div class="muted" style="margin-top:12px">Δεν έχεις προσθέσει ακόμη θεραπείες.</div>'}
+  <div class="card" style="margin-top:12px"><h3>📅 Υπενθυμίσεις στο κινητό</h3><div class="small muted">Κατέβασε ένα αρχείο ημερολογίου (.ics) με όλες τις επόμενες θεραπείες, τα εμβόλια και τα γενέθλια — ανοίγει στο Google Calendar, στο ημερολόγιο του iPhone ή στο Outlook, με ειδοποίηση το πρωί της προηγούμενης μέρας. Δημιουργείται στη συσκευή σου, δεν στέλνεται πουθενά. Όταν αλλάξεις κάτι, ξανακατέβασέ το.</div>
+   <button class="btn" style="margin-top:8px" onclick="icsExport()">📅 Λήψη υπενθυμίσεων (.ics)</button></div>`; }
+function icsExport(){ const nm=S.p.name||'Σκύλος', ev=[], t=today();
+  const esc=x=>String(x).replace(/\\/g,'\\\\').replace(/[,;]/g,m=>'\\'+m).replace(/\n/g,'\\n'), dt=d=>d.replace(/-/g,'');
+  S.vacc.filter(v=>v.next&&v.next>=t).forEach((v,i)=>ev.push({u:'v'+i+dt(v.next), d:v.next, s:`💉 ${v.name} — ${nm}`}));
+  S.rem.forEach(r=>ev.push({u:'r'+r.id, d:remNext(r)<t?t:remNext(r), s:`🔁 ${r.n} — ${nm}`, rr:`FREQ=DAILY;INTERVAL=${r.every}`}));
+  if(S.p.birth) ev.push({u:'b', d:S.p.birth, s:`🎂 Γενέθλια ${nm}`, rr:'FREQ=YEARLY'});
+  if(S.p.gotcha) ev.push({u:'g', d:S.p.gotcha, s:`🏡 Επέτειος υιοθεσίας ${nm}`, rr:'FREQ=YEARLY'});
+  if(!ev.length) return toast('Δεν υπάρχουν επόμενες υπενθυμίσεις');
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Skylos360//EL','CALSCALE:GREGORIAN','X-WR-CALNAME:'+esc('ΣΚΥΛΟΣ 360° — '+nm)];
+  ev.forEach(e=>{ L.push('BEGIN:VEVENT','UID:'+e.u+'-'+(DOGS?DOGS.active:'d')+'@skylos360','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+dt(e.d),'DTEND;VALUE=DATE:'+dt(addDays(e.d,1)),'SUMMARY:'+esc(e.s));
+    if(e.rr) L.push('RRULE:'+e.rr); L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+esc(e.s),'TRIGGER:-PT15H','END:VALARM','END:VEVENT'); });
+  L.push('END:VCALENDAR'); const b=new Blob([L.join('\r\n')],{type:'text/calendar'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+  a.download=`skylos360-${nm.replace(/\s+/g,'_')}.ics`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast(`📅 ${ev.length} υπενθυμίσεις — άνοιξε το αρχείο`); }
+
+/* ---------- SOS & «Χάθηκε» ---------- */
+function sosModal(){ const P=S.p; openModal(`<h2 style="margin-top:0">🚨 Έκτακτη ανάγκη</h2>
+  ${P.vetTel?`<a class="btn" style="display:block;text-align:center;font-size:18px;padding:14px" href="tel:${h(P.vetTel.replace(/\s/g,''))}">📞 Κάλεσε ${h(P.vet||'τον κτηνίατρο')} — ${h(P.vetTel)}</a>`
+    :`<div class="warn">Δεν έχεις αποθηκεύσει τηλέφωνο κτηνιάτρου. <a href="#" onclick="closeModal();go('health','vet');return false">Πρόσθεσέ το τώρα</a> — θα το θες όταν πανικοβληθείς.</div>`}
+  <a class="btn ghost" style="display:block;text-align:center;margin-top:8px" href="https://www.google.com/maps/search/24%CF%89%CF%81%CE%BF+%CE%BA%CF%84%CE%B7%CE%BD%CE%B9%CE%B1%CF%84%CF%81%CE%B5%CE%AF%CE%BF" target="_blank" rel="noopener noreferrer">🗺️ Βρες 24ωρο κτηνιατρείο κοντά σου</a>
+  <div class="small muted" style="text-align:center">ανοίγει τους Χάρτες Google (εξωτερική σελίδα)</div>
+  <div class="grid g2" style="margin-top:12px">
+   <button class="btn ghost" onclick="closeModal();go('health','symptoms')">🔎 Τι έχει; (συμπτώματα)</button>
+   <button class="btn ghost" onclick="closeModal();go('food','tox')">☠️ Έφαγε κάτι τοξικό</button>
+   <button class="btn ghost" onclick="closeModal();go('health','emerg')">🌡️ Θερμοπληξία & πρώτες βοήθειες</button>
+   <button class="btn ghost" onclick="lostModal()">🐕 Χάθηκε ο σκύλος</button></div>
+  <div class="warn small" style="margin-top:12px"><b>Πήγαινε αμέσως</b> αν: δυσκολεύεται να αναπνεύσει · φουσκωμένη κοιλιά με άκαρπους εμετούς · σπασμοί · κατάρρευση · χλωμά/μπλε ούλα · αιμορραγία που δεν σταματά · κατάποση δηλητηρίου · θερμοπληξία.</div>`); }
+function lostModal(){ const P=S.p; openModal(`<h2 style="margin-top:0">🐕 Χάθηκε ο σκύλος — τι κάνω</h2>
+  <ol class="steps small">
+   <li><b>Αμέσως:</b> ψάξε γύρω από το σημείο που χάθηκε, φώναξέ τον με ήρεμη, χαρούμενη φωνή. Μην τον κυνηγήσεις — κάθισε κάτω και άφησέ τον να έρθει. Άφησε έξω από το σπίτι ένα ρούχο σου και νερό.</li>
+   <li><b>Ενημέρωσε τον κτηνίατρό σου</b> ώστε να δηλωθεί η απώλεια στο Εθνικό Μητρώο Ζώων Συντροφιάς — αν κάποιος τον βρει και σαρωθεί το microchip, θα σε εντοπίσουν.</li>
+   <li><b>Ειδοποίησε</b> τον Δήμο (υπηρεσία αδέσποτων), φιλοζωικά σωματεία, κτηνιατρεία και pet shop της περιοχής.</li>
+   <li><b>Αφίσες</b> σε ακτίνα 1–2 χλμ. και ανάρτηση με φωτογραφία σε τοπικές ομάδες στα social media.</li>
+   <li><b>Προσοχή σε απάτες:</b> μην στέλνεις χρήματα πριν δεις τον σκύλο. Κράτα ένα στοιχείο κρυφό (π.χ. ένα σημάδι) για να επιβεβαιώνεις ότι όντως τον έχουν.</li></ol>
+  <h3>🖨 Αφίσα «ΧΑΘΗΚΕ»</h3>
+  ${P.photo?'':'<div class="warn small">Πρόσθεσε φωτογραφία στο Προφίλ — μια αφίσα με φωτογραφία είναι πολύ πιο αποτελεσματική.</div>'}
+  <div class="grid g2" style="gap:0 10px">
+   <label class="f">Περιοχή που χάθηκε<input id="lsA" placeholder="π.χ. Περιστέρι, πλατεία Εθνικής Αντιστάσεως"></label>
+   <label class="f">Ημερομηνία<input id="lsD" type="date" value="${today()}"></label>
+   <label class="f">Τηλέφωνο επικοινωνίας<input id="lsP" type="tel" value="${h(P.phone)}"></label>
+   <label class="f">Αμοιβή (προαιρετικά)<input id="lsR" placeholder="π.χ. Αμοιβή για πληροφορίες"></label></div>
+  <label class="chk"><input type="checkbox" id="lsF"><span>Φοβικός — «μην τον κυνηγάτε, τηλεφωνήστε μου»</span></label>
+  <button class="btn" onclick="printLost()">🖨 Δημιουργία αφίσας</button>`); }
+function printWin(title, body){ const w=window.open('','_blank'); if(!w) return toast('Επίτρεψε τα αναδυόμενα παράθυρα για εκτύπωση');
+  w.document.write(`<!doctype html><html lang="el"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:system-ui,'Segoe UI',Arial,sans-serif;color:#111;margin:0;padding:24px}*{box-sizing:border-box}@page{margin:12mm}</style></head><body>${body}<script>setTimeout(function(){print()},500)<\/script></body></html>`); w.document.close(); }
+function printLost(){ const P=S.p, v=id=>h(($('#'+id)||{}).value||''), b=breedObj(); const ph=v('lsP');
+  printWin('ΧΑΘΗΚΕ '+h(P.name), `<div style="border:6px solid #d0101c;padding:22px;text-align:center;max-width:720px;margin:0 auto">
+   <div style="font-size:72px;font-weight:900;color:#d0101c;letter-spacing:4px;line-height:1">ΧΑΘΗΚΕ</div>
+   <div style="font-size:26px;font-weight:700;margin:6px 0 14px">${P.sex==='f'?'Σκυλίτσα':'Σκύλος'}${v('lsA')?' · '+v('lsA'):''}${v('lsD')?' · '+fmtD(v('lsD')):''}</div>
+   ${P.photo?`<img src="${P.photo}" style="width:360px;height:360px;object-fit:cover;border-radius:10px;border:2px solid #333">`:'<div style="font-size:120px">'+(P.avatar||'🐕')+'</div>'}
+   <div style="font-size:54px;font-weight:900;margin-top:10px">${h(P.name||'')}</div>
+   <div style="font-size:21px;line-height:1.5">${[P.breed?h(P.breed):'', b&&b[1]?SIZES[b[1]]:'', ageTxt()!=='ηλικία ;'?ageTxt():'', P.weight?P.weight+' kg':''].filter(Boolean).join(' · ')}<br>
+   ${P.color?'Χρώμα: <b>'+h(P.color)+'</b><br>':''}${P.chip?'Έχει <b>microchip</b><br>':''}</div>
+   ${($('#lsF')||{}).checked?'<div style="font-size:22px;font-weight:800;color:#d0101c;margin-top:10px">ΕΙΝΑΙ ΦΟΒΙΚΟΣ — ΜΗΝ ΤΟΝ ΚΥΝΗΓΑΤΕ, ΤΗΛΕΦΩΝΗΣΤΕ ΜΟΥ</div>':''}
+   ${v('lsR')?`<div style="font-size:24px;font-weight:800;margin-top:10px">${v('lsR')}</div>`:''}
+   <div style="background:#d0101c;color:#fff;font-size:44px;font-weight:900;padding:12px;margin-top:16px;border-radius:8px">📞 ${ph||'—'}</div>
+   <div style="font-size:15px;margin-top:10px">Αν τον δείτε, πάρτε τηλέφωνο. Κάθε κτηνίατρος μπορεί να σαρώσει το microchip δωρεάν.</div></div>
+   <div style="display:flex;border-top:2px dashed #999;margin-top:18px">${[...Array(8)].map(()=>`<div style="flex:1;border-right:1px dashed #999;padding:6px 2px;writing-mode:vertical-rl;transform:rotate(180deg);font-size:13px;height:140px;text-align:center"><b>${h(P.name||'')}</b> 📞 ${ph}</div>`).join('')}</div>`); }
+function printId(){ const P=S.p, vs=S.vacc.slice().sort((a,b)=>a.d<b.d?1:-1).slice(0,6);
+  printWin('Ταυτότητα '+h(P.name), `<div style="width:520px;border:3px solid #d0101c;border-radius:14px;padding:16px;display:flex;gap:16px">
+   ${P.photo?`<img src="${P.photo}" style="width:150px;height:150px;object-fit:cover;border-radius:10px">`:`<div style="font-size:100px">${P.avatar||'🐕'}</div>`}
+   <div style="font-size:14px;line-height:1.55"><div style="font-size:12px;color:#d0101c;font-weight:800;letter-spacing:1px">ΤΑΥΤΟΤΗΤΑ ΣΚΥΛΟΥ</div><div style="font-size:26px;font-weight:900">${h(P.name||'')}</div>
+   ${h(P.breed||'')} · ${P.sex==='f'?'Θηλυκό':'Αρσενικό'}${P.neut?' (στειρωμένο)':''}<br>${P.birth?'Γέννηση: '+fmtD(P.birth)+'<br>':''}${P.color?'Χρώμα: '+h(P.color)+'<br>':''}${P.marks?'Σημάδια: '+h(P.marks)+'<br>':''}
+   ${P.chip?'<b>Microchip: '+h(P.chip)+'</b><br>':''}${P.owner||P.phone?'Κηδεμόνας: '+h(P.owner)+' '+h(P.phone)+'<br>':''}${P.vet||P.vetTel?'Κτηνίατρος: '+h(P.vet)+' '+h(P.vetTel):''}</div></div>
+   ${vs.length?`<h3 style="margin:14px 0 4px">Πρόσφατα εμβόλια/θεραπείες</h3><table style="border-collapse:collapse;font-size:13px">${vs.map(x=>`<tr><td style="padding:3px 10px 3px 0">${fmtD(x.d)}</td><td>${h(x.name)}</td><td style="padding-left:10px;color:#666">${x.next?'επόμενο '+fmtD(x.next):''}</td></tr>`).join('')}</table>`:''}
+   <p style="font-size:11px;color:#666">Δημιουργήθηκε με ΣΚΥΛΟΣ 360° · ${fmtD(today())}. Δεν αντικαθιστά το επίσημο βιβλιάριο υγείας/διαβατήριο.</p>`); }
 
 /* ---------- Εγκατάσταση (PWA) ---------- */
 let installEvt = null;
